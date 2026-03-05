@@ -1,0 +1,28 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run Extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": ["--extensionDevelopmentPath=${workspaceRoot}"]
+    },
+    {
+      "name": "Signaling Server",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceRoot}/signaling",
+      "program": "server.js",
+      "runtimeExecutable": "nodemon",
+      "restart": true,
+      "console": "integratedTerminal"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Full SyncScript Launch",
+      "configurations": ["Run Extension", "Signaling Server"]
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "name": "syncscript",
+  "displayName": "SyncScript P2P",
+  "version": "1.0.0",
+  "publisher": "MAZIMPAKA-Miguel",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onView:syncscript-sidebar"
+  ],
+  "main": "./extension/out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "syncscript-explorer",
+          "title": "SyncScript",
+          "icon": "$(sync)"
+        }
+      ]
+    },
+    "views": {
+      "syncscript-explorer": [
+        {
+          "type": "webview",
+          "id": "syncscript-sidebar",
+          "name": "P2P Campfire"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "compile": "cd extension && npm run compile",
+    "watch": "cd extension && npm run watch"
+  }
+}

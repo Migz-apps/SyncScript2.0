@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+dist/
+out/
+
+# Environment/OS
+.env
+.DS_Store
+Thumbs.db
+
+# VS Code specific
+.vscode-test/
+*.vsix
+
+# TypeScript
+*.tsbuildinfo
+
+# --- ADD THESE TO YOUR CURRENT FILE ---
+
+# Logs & Debugging
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.node_repl_history
+
+# Nodemon & Runtime
+.nodemonignore
+.pnpm-debug.log*
+
+# Webview / Frontend Build (if using Vite/Parcel later)
+.parcel-cache/
+.eslintcache
+.stylelintcache
+
+# MacOS/Windows junk
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# Local/Personal VS Code settings
+# (We keep launch.json for the team, but hide personal UI tweaks)
+.vscode/settings.json
+.vscode/tasks.json
+!.vscode/launch.json
