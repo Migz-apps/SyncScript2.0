@@ -1,0 +1,8 @@
+{
+  "name": "syncscript-webview",
+  "version": "1.0.0",
+  "dependencies": {
+    "yjs": "^13.6.10",
+    "y-webrtc": "^10.3.0"
+  }
+}

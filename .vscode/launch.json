@@ -6,7 +6,12 @@
       "type": "extensionHost",
       "request": "launch",
       "runtimeExecutable": "${execPath}",
-      "args": ["--extensionDevelopmentPath=${workspaceRoot}"]
+      "args": [
+        "--extensionDevelopmentPath=${workspaceRoot}"
+      ],
+      "outFiles": [
+        "${workspaceRoot}/extension/out/**/*.js"
+      ]
     },
     {
       "name": "Signaling Server",
@@ -22,7 +27,10 @@
   "compounds": [
     {
       "name": "Full SyncScript Launch",
-      "configurations": ["Run Extension", "Signaling Server"]
+      "configurations": [
+        "Run Extension",
+        "Signaling Server"
+      ]
     }
   ]
 }

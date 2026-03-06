@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "outDir": "../extension/out",
+    "rootDir": "./src",
+    "module": "Node16",
+    "target": "ES2022",
+    "strict": true
+  }
+}

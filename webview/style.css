@@ -1,0 +1,18 @@
+/* Add this to your existing style.css */
+
+.signal-searching {
+    background-color: #f1c40f; /* Orange/Yellow */
+    box-shadow: 0 0 10px #f1c40f;
+    animation: pulse 1.5s infinite;
+}
+
+.signal-connected {
+    background-color: #2ecc71; /* Green */
+    box-shadow: 0 0 10px #2ecc71;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.2); }
+    100% { opacity: 1; transform: scale(1); }
+}

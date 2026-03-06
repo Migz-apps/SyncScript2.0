@@ -6,13 +6,7 @@
   "engines": {
     "vscode": "^1.80.0"
   },
-  "categories": [
-    "Other"
-  ],
-  "activationEvents": [
-    "onView:syncscript-sidebar"
-  ],
-  "main": "./extension/out/extension.js",
+  "main": "extension/out/extension.js",
   "contributes": {
     "viewsContainers": {
       "activitybar": [
@@ -32,9 +26,5 @@
         }
       ]
     }
-  },
-  "scripts": {
-    "compile": "cd extension && npm run compile",
-    "watch": "cd extension && npm run watch"
   }
 }
