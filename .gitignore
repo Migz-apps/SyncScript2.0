@@ -2,15 +2,31 @@
 node_modules/
 **/node_modules/
 
-# Build outputs
+# Build outputs (TypeScript compiled files)
 out/
+**/out/
 dist/
+**/dist/
 *.vsix
+
+# VS Code Metadata & Test Data
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
+.vscode-test/
+.vscode-test-peer-b/
 
 # Logs and system files
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 .DS_Store
-.vscode-test/
+Thumbs.db
 
-# Environment variables
+# Environment variables & Local Secrets
 .env
+.env.local
+
+# Build/Cache folders
+.tsbuildinfo
+.eslintcache

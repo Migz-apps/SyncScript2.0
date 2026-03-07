@@ -2,34 +2,48 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Run Extension",
-      "type": "extensionHost",
-      "request": "launch",
-      "runtimeExecutable": "${execPath}",
-      "args": [
-        "--extensionDevelopmentPath=${workspaceRoot}"
-      ],
-      "outFiles": [
-        "${workspaceRoot}/extension/out/**/*.js"
-      ]
-    },
-    {
       "name": "Signaling Server",
       "type": "node",
       "request": "launch",
-      "cwd": "${workspaceRoot}/signaling",
+      "cwd": "${workspaceFolder}/signaling",
       "program": "server.js",
       "runtimeExecutable": "nodemon",
       "restart": true,
       "console": "integratedTerminal"
+    },
+    {
+      "name": "Run Extension (Peer A)",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/extension"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/extension/out/**/*.js"
+      ]
+    },
+    {
+      "name": "Run Extension (Peer B)",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/extension",
+        "--user-data-dir=${workspaceFolder}/.vscode-test-peer-b"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/extension/out/**/*.js"
+      ]
     }
   ],
   "compounds": [
     {
       "name": "Full SyncScript Launch",
       "configurations": [
-        "Run Extension",
-        "Signaling Server"
+        "Signaling Server",
+        "Run Extension (Peer A)",
+        "Run Extension (Peer B)"
       ]
     }
   ]
