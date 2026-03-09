@@ -2,7 +2,6 @@ const WebSocket = require('ws');
 const http = require('http');
 
 const port = process.env.PORT || 4444;
-
 const server = http.createServer((req, res) => {
     res.writeHead(200);
     res.end('SyncScript Signaling Server is Online');
@@ -12,33 +11,29 @@ const wss = new WebSocket.Server({ server });
 const topics = new Map();
 
 wss.on('connection', (ws) => {
-    console.log('📡 New peer joined the lobby');
+    ws.subscribedTopics = new Set();
+    ws.username = 'Anonymous';
     
+    console.log('📡 New peer connected');
+
     ws.on('message', (message) => {
         try {
             const data = JSON.parse(message);
-            const { type, topic, content, sender } = data;
+            const { type, topic, sender } = data;
 
-            // 1. Subscription Logic
+            if (sender) ws.username = sender;
+
             if (type === 'subscribe' && topic) {
                 if (!topics.has(topic)) topics.set(topic, new Set());
                 topics.get(topic).add(ws);
-                console.log(`✅ Peer [${sender || 'Unknown'}] subscribed to: ${topic}`);
-                return; // End here for subscription messages
+                ws.subscribedTopics.add(topic);
+                console.log(`✅ ${ws.username} joined: ${topic}`);
+                return;
             }
 
-            // 2. Logging Code Updates to Terminal
-            if (type === 'code-update') {
-                console.log(`------------------------------------------`);
-                console.log(`✍️  Incoming sync from: ${sender || 'Anonymous'}`);
-                console.log(`📄 Code Content:\n${content}`);
-                console.log(`------------------------------------------`);
-            }
-
-            // 3. Broadcast to all other subscribers in the topic
+            // Code Update Broadcasting
             const targetTopic = topic || 'general';
             const subscribers = topics.get(targetTopic);
-            
             if (subscribers) {
                 subscribers.forEach(client => {
                     if (client !== ws && client.readyState === WebSocket.OPEN) {
@@ -47,14 +42,27 @@ wss.on('connection', (ws) => {
                 });
             }
         } catch (e) {
-            console.error("❌ Broadcast error or invalid JSON:", e.message);
+            // Error handled silently
         }
     });
 
     ws.on('close', () => {
-        console.log('🔌 Peer disconnected');
-        // Clean up the disconnected socket from all topics
-        topics.forEach(clients => clients.delete(ws));
+        ws.subscribedTopics.forEach(topicName => {
+            const subscribers = topics.get(topicName);
+            if (subscribers) {
+                subscribers.delete(ws);
+                console.log(`🔌 ${ws.username} left: ${topicName}`);
+                
+                subscribers.forEach(client => {
+                    if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({
+                            type: 'peer-left',
+                            sender: ws.username
+                        }));
+                    }
+                });
+            }
+        });
     });
 });
 

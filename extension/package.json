@@ -8,13 +8,16 @@
     "vscode": "^1.80.0"
   },
   "main": "./out/extension.js",
-  "activationEvents": [],
+  "activationEvents": [
+    "onView:syncscript-sidebar",
+    "onLanguage"
+  ],
   "contributes": {
     "viewsContainers": {
       "activitybar": [
         {
           "id": "syncscript-container",
-          "icon": "../media/icon.png",
+          "icon": "$(sync)",
           "title": "SyncScript"
         }
       ]
@@ -34,5 +37,9 @@
   },
   "dependencies": {
     "ws": "^8.19.0"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
+    "@types/ws": "^8.5.10"
   }
 }

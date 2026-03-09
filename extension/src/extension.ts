@@ -4,26 +4,27 @@ import { SyncScriptViewProvider } from './provider';
 export function activate(context: vscode.ExtensionContext) {
     console.log('🚀 SyncScript is now active!');
 
-    // 1. Initialize the Sidebar Provider
     const provider = new SyncScriptViewProvider(context.extensionUri);
     
-    // 2. Register the Webview View Provider
-    // The ID 'syncscript-sidebar' MUST match the ID in your package.json
+    // Register the Webview View Provider
     context.subscriptions.push(
         vscode.window.registerWebviewViewProvider('syncscript-sidebar', provider)
-    );
+    )
 
-    // 3. Outgoing Sync Logic: Listen for text changes in the active editor
+    // Listen for text changes
     const changeSubscription = vscode.workspace.onDidChangeTextDocument((event) => {
-        if (event.contentChanges.length > 0) {
-            const content = event.document.getText();
-            
-            // We send the code update to the provider, which handles the WebSocket
-            provider.sendCodeUpdate(content);
+        // IMPORTANT: Only send if the change is from the user typing, 
+        // and NOT from the extension applying a sync update.
+        if (!provider.isApplyingSync && event.contentChanges.length > 0) {
+            // Send the most recent change text only to avoid massive payloads
+            const lastChange = event.contentChanges[0].text;
+            if (lastChange !== "") {
+                provider.sendCodeUpdate(lastChange);
+            }
         }
     });
 
-    // 4. Strong Ownership Watermark Logic
+    // Watermark Logic
     const creditDecorationType = vscode.window.createTextEditorDecorationType({
         after: {
             contentText: 'Solely Created & Engineered by MAZIMPAKA Miguel',
@@ -44,12 +45,10 @@ export function activate(context: vscode.ExtensionContext) {
         }
     };
 
-    // Subscriptions for the UI/Watermark
     context.subscriptions.push(changeSubscription);
     vscode.window.onDidChangeActiveTextEditor(updateCredit, null, context.subscriptions);
     vscode.workspace.onDidChangeTextDocument(updateCredit, null, context.subscriptions);
     
-    // Run watermark once on startup
     updateCredit();
 }
 

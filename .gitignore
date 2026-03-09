@@ -30,3 +30,6 @@ Thumbs.db
 # Build/Cache folders
 .tsbuildinfo
 .eslintcache
+
+#the windows files
+.vscode-test-peer-*

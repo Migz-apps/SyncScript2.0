@@ -12,25 +12,28 @@
       "console": "integratedTerminal"
     },
     {
-      "name": "Run Extension (Peer A)",
+      "name": "Peer A (Primary)",
       "type": "extensionHost",
       "request": "launch",
       "runtimeExecutable": "${execPath}",
       "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}/extension"
+        "--extensionDevelopmentPath=${workspaceFolder}/extension",
+        "--user-data-dir=${workspaceFolder}/.vscode-test-peer-a",
+        "${workspaceFolder}"
       ],
       "outFiles": [
         "${workspaceFolder}/extension/out/**/*.js"
       ]
     },
     {
-      "name": "Run Extension (Peer B)",
+      "name": "Peer B (Secondary)",
       "type": "extensionHost",
       "request": "launch",
       "runtimeExecutable": "${execPath}",
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}/extension",
-        "--user-data-dir=${workspaceFolder}/.vscode-test-peer-b"
+        "--user-data-dir=${workspaceFolder}/.vscode-test-peer-b",
+        "${workspaceFolder}/extension"
       ],
       "outFiles": [
         "${workspaceFolder}/extension/out/**/*.js"
@@ -39,12 +42,17 @@
   ],
   "compounds": [
     {
-      "name": "Full SyncScript Launch",
+      "name": "🚀 Launch SyncScript Ecosystem",
       "configurations": [
         "Signaling Server",
-        "Run Extension (Peer A)",
-        "Run Extension (Peer B)"
-      ]
+        "Peer A (Primary)",
+        "Peer B (Secondary)"
+      ],
+      "stopAll": true,
+      "presentation": {
+        "group": "sync",
+        "order": 1
+      }
     }
   ]
 }
