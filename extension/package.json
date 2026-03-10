@@ -1,45 +1,50 @@
 {
-  "name": "syncscript-extension",
-  "displayName": "SyncScript",
-  "description": "Real-time P2P Code Synchronization by MAZIMPAKA Miguel",
-  "version": "1.0.0",
-  "publisher": "mazimpaka-miguel",
+  "name": "syncscript",
+  "displayName": "SyncScript P2P",
+  "description": "Real-time room-based code synchronization",
+  "version": "0.0.1",
   "engines": {
-    "vscode": "^1.80.0"
+    "vscode": "^1.85.0"
   },
-  "main": "./out/extension.js",
-  "activationEvents": [
-    "onView:syncscript-sidebar",
-    "onLanguage"
+  "categories": [
+    "Other"
   ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
   "contributes": {
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "syncscript-container",
-          "icon": "$(sync)",
-          "title": "SyncScript"
+          "id": "syncscript-explorer",
+          "title": "SyncScript",
+          "icon": "$(broadcast)"
         }
       ]
     },
     "views": {
-      "syncscript-container": [
+      "syncscript-explorer": [
         {
           "type": "webview",
-          "id": "syncscript-sidebar",
-          "name": "Sync Connection"
+          "id": "syncscript.sidebar",
+          "name": "Workspace Control"
         }
       ]
     }
   },
   "scripts": {
-    "compile": "tsc -p ./"
-  },
-  "dependencies": {
-    "ws": "^8.19.0"
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "test": "node ./out/test/runTest.js"
   },
   "devDependencies": {
-    "@types/vscode": "^1.80.0",
-    "@types/ws": "^8.5.10"
+    "@types/vscode": "^1.85.0",
+    "@types/node": "18.x",
+    "@types/ws": "^8.5.10",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "ws": "^8.16.0"
   }
 }

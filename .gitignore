@@ -1,35 +1,31 @@
-# Dependencies
-node_modules/
-**/node_modules/
-
-# Build outputs (TypeScript compiled files)
-out/
-**/out/
-dist/
-**/dist/
-*.vsix
-
-# VS Code Metadata & Test Data
+# --- IDE / OS Files ---
 .vscode/*
 !.vscode/launch.json
 !.vscode/tasks.json
-.vscode-test/
-.vscode-test-peer-b/
-
-# Logs and system files
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 .DS_Store
 Thumbs.db
 
-# Environment variables & Local Secrets
+# --- Node.js / Dependencies ---
+node_modules/
+package-lock.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- TypeScript Compilation Output ---
+# We ignore these because they are generated from the .ts files
+extension/out/
+signaling/dist/
+*.tsbuildinfo
+
+# --- Extension Specific ---
+*.vsix
+.vscode-test/
+
+# --- Signaling Server Data ---
+# We ignore the actual data so you don't push private room info to GitHub
+signaling/data/rooms.json
+
+# --- Environment Secrets ---
 .env
 .env.local
-
-# Build/Cache folders
-.tsbuildinfo
-.eslintcache
-
-#the windows files
-.vscode-test-peer-*

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>SyncScript</title>
+</head>
+<body class="bg-[#1e1e1e] text-gray-200 p-4 font-sans text-sm">
+    <div id="app" class="max-w-md mx-auto">
+        <div class="flex items-center justify-between border-b border-gray-700 pb-2 mb-6">
+            <h2 class="text-blue-400 font-bold text-lg">SyncScript</h2>
+            <div id="status-dot" class="w-3 h-3 bg-red-500 rounded-full"></div>
+        </div>
+
+        <div id="view-selection" class="space-y-4">
+            <button onclick="showView('create')" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded transition">Create Room</button>
+            <button onclick="showView('join')" class="w-full bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded transition">Join Room</button>
+        </div>
+
+        <div id="view-create" class="hidden space-y-4">
+            <h3 class="text-gray-400 uppercase text-xs font-bold">Admin Dashboard</h3>
+            <div>
+                <label class="block mb-1 opacity-70">Admin Name</label>
+                <input type="text" value="Admin" disabled class="w-full bg-gray-800 border border-gray-700 p-2 rounded opacity-50 cursor-not-allowed">
+            </div>
+            <div>
+                <label class="block mb-1">Security Key</label>
+                <input type="password" id="create-key" placeholder="••••••••" class="w-full bg-gray-800 border border-gray-700 p-2 rounded focus:border-blue-500 outline-none">
+            </div>
+            <button id="btn-create" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded">Initialize Room</button>
+            <button onclick="showView('selection')" class="w-full text-gray-500 hover:text-white text-xs text-center">← Back</button>
+        </div>
+
+        <div id="view-join" class="hidden space-y-4">
+            <h3 class="text-gray-400 uppercase text-xs font-bold">Join Workspace</h3>
+            <input type="text" id="join-id" placeholder="Room ID" class="w-full bg-gray-800 border border-gray-700 p-2 rounded focus:border-blue-500 outline-none">
+            <input type="text" id="join-name" placeholder="Your Name" class="w-full bg-gray-800 border border-gray-700 p-2 rounded focus:border-blue-500 outline-none">
+            <input type="password" id="join-key" placeholder="Security Key" class="w-full bg-gray-800 border border-gray-700 p-2 rounded focus:border-blue-500 outline-none">
+            <button id="btn-join" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded">Connect</button>
+            <button onclick="showView('selection')" class="w-full text-gray-500 hover:text-white text-xs text-center">← Back</button>
+        </div>
+
+        <div id="view-active" class="hidden space-y-6">
+            <div class="bg-gray-800 p-3 rounded border border-gray-700">
+                <p class="text-xs text-gray-400">ROOM ID</p>
+                <p id="active-room-id" class="text-lg font-mono text-blue-400 tracking-widest">---</p>
+            </div>
+
+            <div class="border border-dashed border-gray-700 p-4 rounded text-center text-gray-500">
+                <p class="text-xs italic">Syncing folder structure...</p>
+            </div>
+
+            <div id="voting-panel" class="hidden animate-pulse border-2 border-yellow-600 p-4 rounded bg-yellow-900/20">
+                <p class="text-yellow-500 font-bold mb-2 text-center">DAILY SYNC VOTE</p>
+                <p class="text-xs mb-4 text-center">Updates detected. Merge changes to all peers?</p>
+                <div class="flex gap-2">
+                    <button id="vote-yes" class="flex-1 bg-green-600 p-2 rounded text-xs font-bold">YES</button>
+                    <button id="vote-no" class="flex-1 bg-red-600 p-2 rounded text-xs font-bold">NO</button>
+                </div>
+                <p id="countdown" class="text-center mt-3 text-xl font-mono">120s</p>
+            </div>
+        </div>
+    </div>
+    <script src="main.js"></script>
+</body>
+</html>

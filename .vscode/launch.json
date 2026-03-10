@@ -2,57 +2,32 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Signaling Server",
+      "name": "Run Server",
       "type": "node",
       "request": "launch",
       "cwd": "${workspaceFolder}/signaling",
-      "program": "server.js",
+      "program": "server.ts", // CHANGED: Using ts-node via launch config
       "runtimeExecutable": "nodemon",
       "restart": true,
       "console": "integratedTerminal"
     },
     {
-      "name": "Peer A (Primary)",
+      "name": "SyncScript Extension",
       "type": "extensionHost",
       "request": "launch",
       "runtimeExecutable": "${execPath}",
       "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}/extension",
-        "--user-data-dir=${workspaceFolder}/.vscode-test-peer-a",
-        "${workspaceFolder}"
+          "--extensionDevelopmentPath=${workspaceFolder}/extension"
       ],
       "outFiles": [
-        "${workspaceFolder}/extension/out/**/*.js"
-      ]
-    },
-    {
-      "name": "Peer B (Secondary)",
-      "type": "extensionHost",
-      "request": "launch",
-      "runtimeExecutable": "${execPath}",
-      "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}/extension",
-        "--user-data-dir=${workspaceFolder}/.vscode-test-peer-b",
-        "${workspaceFolder}/extension"
-      ],
-      "outFiles": [
-        "${workspaceFolder}/extension/out/**/*.js"
+          "${workspaceFolder}/extension/out/**/*.js"
       ]
     }
   ],
   "compounds": [
     {
-      "name": "🚀 Launch SyncScript Ecosystem",
-      "configurations": [
-        "Signaling Server",
-        "Peer A (Primary)",
-        "Peer B (Secondary)"
-      ],
-      "stopAll": true,
-      "presentation": {
-        "group": "sync",
-        "order": 1
-      }
+      "name": "Full Project Dev",
+      "configurations": ["Run Server", "SyncScript Extension"]
     }
   ]
 }
