@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
 import { SocketManager } from './socketManager';
 
 export class SyncScriptProvider implements vscode.WebviewViewProvider {
@@ -20,7 +21,6 @@ export class SyncScriptProvider implements vscode.WebviewViewProvider {
 
         webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
-        // Handle messages from UI
         webviewView.webview.onDidReceiveMessage(data => {
             switch (data.command) {
                 case 'createRoom':
@@ -28,6 +28,10 @@ export class SyncScriptProvider implements vscode.WebviewViewProvider {
                     break;
                 case 'joinRoom':
                     this._socket.send({ type: 'JOIN_ROOM', roomId: data.roomId, userName: data.name, key: data.key });
+                    break;
+                case 'leaveRoom':
+                    // This triggers the socket 'close' event, which triggers removeUser in SQLite
+                    this._socket.disconnect();
                     break;
             }
         });
@@ -40,14 +44,10 @@ export class SyncScriptProvider implements vscode.WebviewViewProvider {
     }
 
     private _getHtmlForWebview(webview: vscode.Webview) {
-        // Path to HTML in the webview folder
         const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'webview', 'main.js'));
         const htmlUri = vscode.Uri.joinPath(this._extensionUri, 'webview', 'index.html');
         
-        // Note: For VS Code security, we often read the file and inject URIs
-        return `
-            <script>const vscode = acquireVsCodeApi();</script>
-            ${require('fs').readFileSync(htmlUri.fsPath, 'utf8').replace('main.js', scriptUri.toString())}
-        `;
+        let htmlContent = fs.readFileSync(htmlUri.fsPath, 'utf8');
+        return htmlContent.replace(/src="main\.js"/, `src="${scriptUri}"`);
     }
 }

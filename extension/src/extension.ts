@@ -8,7 +8,7 @@ export function activate(context: vscode.ExtensionContext) {
     const socketManager = new SocketManager();
     const provider = new SyncScriptProvider(context.extensionUri, socketManager);
 
-    // CHANGED: This registers the sidebar view defined in package.json
+    // Register the sidebar view defined in package.json
     context.subscriptions.push(
         vscode.window.registerWebviewViewProvider(
             SyncScriptProvider.viewType,

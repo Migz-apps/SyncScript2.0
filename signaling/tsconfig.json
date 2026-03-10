@@ -1,12 +1,15 @@
 {
   "compilerOptions": {
-    "target": "ES6",
-    "module": "CommonJS",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
+    "target": "ES2022",                /* Modern Node.js support */
+    "module": "CommonJS",              /* Standard for Node.js servers */
+    "rootDir": "./src",                /* Where your .ts files live */
+    "outDir": "./dist",                /* Where compiled .js files go */
+    "esModuleInterop": true,           /* Fixes 'sqlite3' import issues */
     "forceConsistentCasingInFileNames": true,
-    "outDir": "./dist"
+    "strict": true,                    /* Ensures type safety */
+    "skipLibCheck": true,              /* Speeds up compilation */
+    "resolveJsonModule": true          /* Allows importing .json files if needed */
   },
-  "include": ["**/*.ts"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
 }

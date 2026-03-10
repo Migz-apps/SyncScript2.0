@@ -10,7 +10,6 @@ export class SocketManager {
     }
 
     private connect() {
-        // CHANGED: Points to your signaling server port
         this.socket = new WebSocket('ws://localhost:4444');
 
         this.socket.on('open', () => {
@@ -19,12 +18,17 @@ export class SocketManager {
         });
 
         this.socket.on('message', (data) => {
-            const message = JSON.parse(data.toString());
-            this.notifyHandlers(message);
+            try {
+                const message = JSON.parse(data.toString());
+                this.notifyHandlers(message);
+            } catch (err) {
+                console.error("Failed to parse socket message", err);
+            }
         });
 
         this.socket.on('close', () => {
             console.log('Disconnected. Retrying in 5s...');
+            this.notifyHandlers({ type: 'DISCONNECTED' });
             setTimeout(() => this.connect(), 5000);
         });
     }
@@ -32,6 +36,13 @@ export class SocketManager {
     public send(data: any) {
         if (this.socket?.readyState === WebSocket.OPEN) {
             this.socket.send(JSON.stringify(data));
+        }
+    }
+
+    // New: Explicitly close connection (triggers server-side removeUser)
+    public disconnect() {
+        if (this.socket) {
+            this.socket.close();
         }
     }
 

@@ -25,6 +25,7 @@
       "syncscript-explorer": [
         {
           "type": "webview",
+          "icon": "$(sync)",
           "id": "syncscript.sidebar",
           "name": "Workspace Control"
         }
