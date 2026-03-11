@@ -8,7 +8,7 @@ export function activate(context: vscode.ExtensionContext) {
     const socketManager = new SocketManager();
     const provider = new SyncScriptProvider(context.extensionUri, socketManager);
 
-    // Register the sidebar view defined in package.json
+    // 1. Register Sidebar View
     context.subscriptions.push(
         vscode.window.registerWebviewViewProvider(
             SyncScriptProvider.viewType,
@@ -16,16 +16,62 @@ export function activate(context: vscode.ExtensionContext) {
         )
     );
 
-    // Listen for server responses to update the Sidebar UI
+    // 2. Handle Server Responses for UI & Admin Logic
     socketManager.onMessage((msg) => {
-        if (msg.type === 'ROOM_CREATED' || msg.type === 'JOIN_RESULT') {
-            provider.updateUI({
-                type: 'ROOM_READY',
-                roomId: msg.room?.roomId || msg.roomId,
-                isAdmin: msg.type === 'ROOM_CREATED'
-            });
+        switch (msg.type) {
+            case 'ROOM_CREATED':
+            case 'JOIN_RESULT':
+                if (msg.success !== false) {
+                    provider.updateUI({
+                        type: 'ROOM_READY',
+                        roomId: msg.room?.roomId || msg.roomId,
+                        roomName: msg.room?.roomName || msg.roomName,
+                        isAdmin: msg.type === 'ROOM_CREATED' || msg.isAdmin
+                    });
+                }
+                break;
+
+            case 'DEACTIVATION_START':
+                provider.updateUI({ type: 'DEACTIVATION_START', duration: msg.duration });
+                break;
+
+            case 'DEACTIVATION_CANCELLED':
+                provider.updateUI({ type: 'DEACTIVATION_CANCELLED' });
+                break;
+
+            case 'ROOM_TERMINATED':
+                provider.updateUI({ type: 'ROOM_TERMINATED' });
+                vscode.window.showWarningMessage("SyncScript: The room has been deactivated and deleted.");
+                break;
         }
     });
+
+    // 3. Document Sync Logic (Outgoing Changes)
+    context.subscriptions.push(
+        vscode.workspace.onDidChangeTextDocument((event) => {
+            // Only send if: User is in a room, it's a file, and change was NOT remote
+            if (socketManager.isInRoom() && 
+                event.document.uri.scheme === 'file' && 
+                !socketManager.isApplyingRemote()) {
+                
+                const changes = event.contentChanges.map(change => ({
+                    range: {
+                        start: { line: change.range.start.line, character: change.range.start.character },
+                        end: { line: change.range.end.line, character: change.range.end.character }
+                    },
+                    text: change.text
+                }));
+
+                socketManager.send({
+                    type: 'FILE_CHANGE',
+                    fileUri: event.document.uri.toString(),
+                    changes: changes
+                });
+            }
+        })
+    );
 }
 
-export function deactivate() {}
+export function deactivate() {
+    console.log('SyncScript deactivated.');
+}

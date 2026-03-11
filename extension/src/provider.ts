@@ -16,22 +16,48 @@ export class SyncScriptProvider implements vscode.WebviewViewProvider {
 
         webviewView.webview.options = {
             enableScripts: true,
-            localResourceRoots: [this._extensionUri]
+            localResourceRoots: [
+                this._extensionUri,
+                vscode.Uri.joinPath(this._extensionUri, 'webview')
+            ]
         };
 
         webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
+        // HANDLE MESSAGES FROM WEBVIEW (UI -> Extension -> Server)
         webviewView.webview.onDidReceiveMessage(data => {
             switch (data.command) {
                 case 'createRoom':
-                    this._socket.send({ type: 'CREATE_ROOM', adminName: 'Admin', key: data.key });
+                    // UPDATED: Added roomName to match the Initialize button intent
+                    this._socket.send({ 
+                        type: 'CREATE_ROOM', 
+                        adminName: 'Admin', 
+                        roomName: data.roomName, 
+                        key: data.key 
+                    });
                     break;
+
                 case 'joinRoom':
-                    this._socket.send({ type: 'JOIN_ROOM', roomId: data.roomId, userName: data.name, key: data.key });
+                    this._socket.send({ 
+                        type: 'JOIN_ROOM', 
+                        roomId: data.roomId, 
+                        userName: data.name, 
+                        key: data.key 
+                    });
                     break;
+
                 case 'leaveRoom':
-                    // This triggers the socket 'close' event, which triggers removeUser in SQLite
                     this._socket.disconnect();
+                    break;
+
+                case 'deactivateRoom':
+                    // NEW: Handles the admin's request to shut down the room
+                    this._socket.send({ type: 'DEACTIVATE_ROOM' });
+                    break;
+
+                case 'cancelDeactivation':
+                    // NEW: Handles the admin's request to stop the countdown
+                    this._socket.send({ type: 'CANCEL_DEACTIVATION' });
                     break;
             }
         });
@@ -48,6 +74,11 @@ export class SyncScriptProvider implements vscode.WebviewViewProvider {
         const htmlUri = vscode.Uri.joinPath(this._extensionUri, 'webview', 'index.html');
         
         let htmlContent = fs.readFileSync(htmlUri.fsPath, 'utf8');
-        return htmlContent.replace(/src="main\.js"/, `src="${scriptUri}"`);
+        
+        // Inject the webview script URI and the VS Code API
+        return htmlContent
+            .replace(/src="main\.js"/g, `src="${scriptUri}"`)
+            // Ensures TailWind or local CSS links are resolved
+            .replace(/href="output\.css"/g, `href="${webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'webview', 'output.css'))}"`);
     }
 }

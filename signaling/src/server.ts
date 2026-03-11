@@ -4,7 +4,6 @@ import { RoomManager } from './roomManager';
 import { SyncEngine } from './syncEngine';
 import { RoomModel } from './models/roomModel';
 
-// Custom interface to track room membership and identity on the socket object
 interface ExtendedWebSocket extends WebSocket {
     socketId?: string;
     roomId?: string;
@@ -19,106 +18,146 @@ const server = http.createServer((req: http.IncomingMessage, res: http.ServerRes
 const wss = new WebSocketServer({ server });
 const roomManager = new RoomManager();
 const syncEngine = new SyncEngine();
+const deactivationTimers = new Map<string, NodeJS.Timeout>();
 
 const port = 4444;
 
-console.log(`🚀 SyncScript Signaling Server starting on port ${port}`);
-
 wss.on('connection', (ws: ExtendedWebSocket) => {
-    // Assign a unique ID to this connection session
     ws.socketId = Math.random().toString(36).substring(7);
-    console.log(`New client connected: ${ws.socketId}`);
-
+    
     ws.on('message', async (message: string) => {
         try {
             const data = JSON.parse(message);
-            console.log('Received:', data.type);
 
             switch (data.type) {
-                case 'CREATE_ROOM':
-                    const newRoom = await roomManager.createRoom(data.adminName, data.key);
-                    // Map identity to the socket instance
+                case 'CREATE_ROOM': {
+                    const adminName: string = data.adminName ?? 'Admin';
+                    const roomKey: string = data.key ?? '';
+                    const roomName: string = data.roomName ?? 'New Room';
+                    const socketId = ws.socketId ?? '';
+
+                    // Use ! or ?? to satisfy TS that socketId is a string
+                    const newRoom = await roomManager.createRoom(
+                        adminName, 
+                        roomKey, 
+                        roomName,
+                        socketId
+                    );
+
                     ws.roomId = newRoom.roomId;
-                    ws.username = data.adminName;
-                    
-                    await RoomModel.addUser(ws.socketId!, data.adminName, newRoom.roomId);
+                    ws.username = adminName;
+
+                    await RoomModel.addUser(socketId, adminName, newRoom.roomId);
                     
                     ws.send(JSON.stringify({ 
                         type: 'ROOM_CREATED', 
-                        room: newRoom 
+                        room: newRoom,
+                        isAdmin: true 
                     }));
                     break;
+                }
 
-                case 'JOIN_ROOM':
-                    const joinResult = await roomManager.joinRoom(data.roomId, data.key, data.userName);
+                case 'JOIN_ROOM': {
+                    const jRoomId: string = data.roomId ?? '';
+                    const jKey: string = data.key ?? '';
+                    const jUserName: string = data.userName ?? 'Guest';
+
+                    const joinResult = await roomManager.joinRoom(jRoomId, jKey, jUserName);
                     if (joinResult.success) {
-                        ws.roomId = data.roomId;
-                        ws.username = data.userName;
-                        await RoomModel.addUser(ws.socketId!, data.userName, data.roomId);
+                        ws.roomId = jRoomId;
+                        ws.username = jUserName;
+                        if (ws.socketId) {
+                            await RoomModel.addUser(ws.socketId, jUserName, jRoomId);
+                        }
                     }
                     
+                    const roomInfo = await RoomModel.getRoom(jRoomId);
+                    const isAdmin = roomInfo && roomInfo.admin_id === ws.socketId;
+
                     ws.send(JSON.stringify({ 
                         type: 'JOIN_RESULT', 
-                        ...joinResult 
+                        ...joinResult,
+                        isAdmin: !!isAdmin
                     }));
                     break;
+                }
 
-                case 'FILE_CHANGE':
-                    // Relay file changes to everyone else in the room
-                    if (ws.roomId) {
-                        syncEngine.broadcastToRoom(wss, ws.roomId, ws.socketId!, {
-                            type: 'FILE_CHANGE',
-                            fileUri: data.fileUri,
-                            changes: data.changes,
-                            sender: ws.username
+                case 'DEACTIVATE_ROOM': {
+                    if (!ws.roomId || !ws.socketId) return;
+
+                    const room = await RoomModel.getRoom(ws.roomId);
+                    if (room && room.admin_id === ws.socketId) {
+                        syncEngine.broadcastToRoom(wss, ws.roomId, '', { 
+                            type: 'DEACTIVATION_START', 
+                            duration: 120 
                         });
+
+                        const timer = setTimeout(async () => {
+                            if (ws.roomId) {
+                                await RoomModel.deleteRoom(ws.roomId);
+                                syncEngine.broadcastToRoom(wss, ws.roomId, '', { type: 'ROOM_TERMINATED' });
+                                deactivationTimers.delete(ws.roomId);
+                            }
+                        }, 120000);
+
+                        deactivationTimers.set(ws.roomId, timer);
                     }
                     break;
+                }
 
-                case 'CAST_VOTE':
-                    if (ws.roomId) {
-                        // In a real scenario, you'd fetch total members from DB/RoomModel
-                        // For now, we use a provided count or default
-                        const result = syncEngine.registerVote(
-                            data.fileId, 
-                            ws.socketId!, 
-                            data.choice, 
-                            data.totalMembers || 2
-                        );
-
-                        if (result !== null) {
-                            syncEngine.broadcastToRoom(wss, ws.roomId, '', {
-                                type: 'VOTE_RESULT',
-                                fileId: data.fileId,
-                                approved: result
-                            });
+                case 'CANCEL_DEACTIVATION': {
+                    if (!ws.roomId) return;
+                    const room = await RoomModel.getRoom(ws.roomId);
+                    if (room && room.admin_id === ws.socketId) {
+                        const existingTimer = deactivationTimers.get(ws.roomId);
+                        if (existingTimer) {
+                            clearTimeout(existingTimer);
+                            deactivationTimers.delete(ws.roomId);
+                            syncEngine.broadcastToRoom(wss, ws.roomId, '', { type: 'DEACTIVATION_CANCELLED' });
                         }
                     }
                     break;
+                }
 
-                default:
-                    console.log('Unknown message type:', data.type);
+                case 'FILE_CHANGE':
+                    if (ws.roomId && ws.socketId) {
+                        await RoomModel.updateActivity(ws.roomId);
+                        syncEngine.broadcastToRoom(wss, ws.roomId, ws.socketId, {
+                            type: 'FILE_CHANGE',
+                            fileUri: data.fileUri ?? '',
+                            changes: data.changes ?? [],
+                            sender: ws.username ?? 'Unknown'
+                        });
+                    }
+                    break;
             }
         } catch (err) {
             console.error('Operation failed:', err);
-            ws.send(JSON.stringify({ type: 'ERROR', message: 'Internal Server Error' }));
         }
     });
 
     ws.on('close', async () => {
-        console.log(`Client disconnected: ${ws.socketId}`);
         if (ws.socketId) {
             const roomId = await RoomModel.removeUser(ws.socketId);
             if (roomId) {
-                // Notify remaining users
                 syncEngine.broadcastToRoom(wss, roomId, ws.socketId, {
                     type: 'USER_LEFT',
                     socketId: ws.socketId,
-                    username: ws.username
+                    username: ws.username ?? 'Unknown'
                 });
             }
         }
     });
 });
 
-server.listen(port);
+setInterval(async () => {
+    try {
+        await RoomModel.cleanInactiveRooms();
+    } catch (err) {
+        console.error('Cleanup failed:', err);
+    }
+}, 24 * 60 * 60 * 1000); 
+
+server.listen(port, () => {
+    console.log(`🚀 SyncScript Signaling Server running on port ${port}`);
+});

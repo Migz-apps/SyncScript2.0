@@ -3,9 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 </head>
 <body class="bg-[#1e1e1e] text-gray-200 p-4 font-sans text-sm select-none">
+    <div id="deactivation-overlay" class="hidden fixed inset-0 bg-black/90 flex flex-col items-center justify-center z-50 p-6 text-center">
+        <div class="bg-gray-900 border border-red-500 p-8 rounded-lg shadow-2xl max-w-xs w-full">
+            <h2 class="text-red-500 font-bold text-xl mb-2">Deactivating Room</h2>
+            <p class="text-gray-400 text-xs mb-4">The admin has initiated a permanent shutdown of this room.</p>
+            <div id="countdown-timer" class="text-5xl font-mono font-bold text-white mb-6">02:00</div>
+            
+            <button id="btn-stop-deactivation" class="hidden w-full bg-gray-700 hover:bg-gray-600 text-white py-2 rounded font-bold transition">
+                STOP DEACTIVATION
+            </button>
+            <p id="wait-message" class="text-gray-500 text-[10px] mt-4">All data will be purged once the timer hits zero.</p>
+        </div>
+    </div>
+
     <div id="app" class="max-w-md mx-auto">
         <div class="flex items-center justify-between border-b border-gray-700 pb-2 mb-6">
             <h2 class="text-blue-400 font-bold text-lg">SyncScript</h2>
@@ -19,6 +32,7 @@
 
         <div id="view-create" class="hidden space-y-4">
             <h3 class="text-gray-400 uppercase text-xs font-bold">New Room</h3>
+            <input type="text" id="create-name" placeholder="Room Name (e.g. Backend Team)" class="w-full bg-gray-800 border border-gray-700 p-2 rounded outline-none focus:border-blue-500 mb-1">
             <input type="password" id="create-key" placeholder="Room Password" class="w-full bg-gray-800 border border-gray-700 p-2 rounded outline-none focus:border-blue-500">
             <button id="btn-create" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded">Initialize</button>
             <button class="nav-back w-full text-gray-500 hover:text-white text-xs mt-2">← Back</button>
@@ -35,20 +49,30 @@
 
         <div id="view-active" class="hidden space-y-4">
             <div class="bg-gray-900 border border-gray-700 p-3 rounded">
-                <p class="text-[10px] text-gray-500 uppercase">Active Room ID</p>
-                <div class="flex justify-between items-center">
-                    <p id="active-room-id" class="text-blue-400 font-mono text-base break-all">---</p>
+                <p id="display-room-name" class="text-blue-400 font-bold text-sm mb-1 uppercase tracking-wide">---</p>
+                <p class="text-[10px] text-gray-500 uppercase">Room ID (Share this)</p>
+                <div class="flex justify-between items-center mt-1">
+                    <p id="active-room-id" class="text-blue-500 font-mono text-base break-all font-bold">---</p>
+                    <button onclick="copyId()" class="text-[10px] bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded border border-gray-600">Copy</button>
                 </div>
             </div>
             
             <div id="member-list" class="space-y-1">
                 <p class="text-[10px] text-gray-500 uppercase">Participants</p>
-                </div>
+            </div>
 
-            <button id="btn-leave" class="w-full border border-red-500 text-red-500 hover:bg-red-500 hover:text-white py-2 rounded transition">Leave Room</button>
-            <p class="text-center text-[10px] text-gray-500 italic">Data saved to persistent SQLite</p>
+            <div class="pt-4 space-y-2">
+                <button id="btn-leave" class="w-full bg-gray-800 text-gray-400 hover:text-white py-2 rounded transition border border-gray-700">Leave Room</button>
+                <button id="btn-deactivate" class="hidden w-full border border-red-500/50 text-red-500 hover:bg-red-500 hover:text-white py-2 rounded transition font-bold">Deactivate Room</button>
+            </div>
         </div>
     </div>
     <script src="main.js"></script>
+    <script>
+        function copyId() {
+            const id = document.getElementById('active-room-id').innerText;
+            navigator.clipboard.writeText(id);
+        }
+    </script>
 </body>
 </html>
