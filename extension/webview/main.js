@@ -1,7 +1,12 @@
 (function() {
-    const vscode = (typeof window.vscodeApi === 'undefined') 
-        ? (window.vscodeApi = acquireVsCodeApi()) 
-        : window.vscodeApi;
+    // Acquire VS Code API safely
+    let vscode;
+    try {
+        vscode = acquireVsCodeApi();
+    } catch (e) {
+        console.warn("VS Code API already acquired or running outside VS Code context.");
+        vscode = window.vscodeApi;
+    }
 
     let countdownInterval = null;
 
@@ -20,8 +25,10 @@
         const countdownTimer = document.getElementById('countdown-timer');
         const btnStopDeactivation = document.getElementById('btn-stop-deactivation');
         const btnDeactivate = document.getElementById('btn-deactivate');
+        const memberList = document.getElementById('member-list');
         
         const showView = (id) => {
+            console.log(`Switching to view: ${id}`);
             Object.keys(views).forEach(v => {
                 if (views[v]) views[v].classList.add('hidden');
             });
@@ -48,17 +55,19 @@
             }, 1000);
         };
 
+        // Initialize view
         showView('selection');
 
-        // Navigation
-        document.getElementById('nav-to-create').onclick = () => showView('create');
-        document.getElementById('nav-to-join').onclick = () => showView('join');
+        // Navigation Actions
+        document.getElementById('nav-to-create').addEventListener('click', () => showView('create'));
+        document.getElementById('nav-to-join').addEventListener('click', () => showView('join'));
+        
         document.querySelectorAll('.nav-back').forEach(btn => {
-            btn.onclick = () => showView('selection');
+            btn.addEventListener('click', () => showView('selection'));
         });
 
-        // Room Creation
-        document.getElementById('btn-create').onclick = () => {
+        // Room Creation Trigger
+        document.getElementById('btn-create').addEventListener('click', () => {
             const roomName = document.getElementById('create-name').value.trim();
             const key = document.getElementById('create-key').value;
             
@@ -66,11 +75,13 @@
                 alert("Room Name and Password are required.");
                 return;
             }
-            vscode.postMessage({ command: 'createRoom', roomName, key });
-        };
 
-        // Room Joining
-        document.getElementById('btn-join').onclick = () => {
+            console.log("Sending 'createRoom' command...");
+            vscode.postMessage({ command: 'createRoom', roomName, key });
+        });
+
+        // Room Joining Trigger
+        document.getElementById('btn-join').addEventListener('click', () => {
             const roomId = document.getElementById('join-id').value.trim();
             const name = document.getElementById('join-name').value.trim();
             const key = document.getElementById('join-key').value;
@@ -79,30 +90,34 @@
                 alert("Please fill in all joining fields.");
                 return;
             }
+
+            console.log("Sending 'joinRoom' command...");
             vscode.postMessage({ command: 'joinRoom', roomId, name, key });
-        };
+        });
 
         // Leave Room
-        document.getElementById('btn-leave').onclick = () => {
+        document.getElementById('btn-leave').addEventListener('click', () => {
             vscode.postMessage({ command: 'leaveRoom' });
             showView('selection');
             statusDot.classList.replace('bg-green-500', 'bg-red-500');
-        };
+        });
 
-        // Deactivation Actions (Admin Only)
-        btnDeactivate.onclick = () => {
-            if (confirm("Are you sure? This will delete the room and all activity history after 2 minutes.")) {
+        // Deactivation (Admin Only)
+        btnDeactivate.addEventListener('click', () => {
+            if (confirm("Deactivate Room? This deletes everything in 2 minutes.")) {
                 vscode.postMessage({ command: 'deactivateRoom' });
             }
-        };
+        });
 
-        btnStopDeactivation.onclick = () => {
+        btnStopDeactivation.addEventListener('click', () => {
             vscode.postMessage({ command: 'cancelDeactivation' });
-        };
+        });
 
-        // Message Listener
+        // Inbound Message Handler
         window.addEventListener('message', event => {
             const msg = event.data;
+            console.log("Received message from Extension:", msg.type);
+
             switch(msg.type) {
                 case 'ROOM_READY':
                 case 'ROOM_CREATED':
@@ -112,7 +127,7 @@
                     roomNameDisplay.innerText = roomData.roomName || 'Active Room';
                     statusDot.classList.replace('bg-red-500', 'bg-green-500');
                     
-                    // Toggle Admin Button
+                    // Show/Hide Admin Controls
                     if (msg.isAdmin) {
                         btnDeactivate.classList.remove('hidden');
                         btnStopDeactivation.classList.remove('hidden');
@@ -137,16 +152,30 @@
                     clearInterval(countdownInterval);
                     showView('selection');
                     statusDot.classList.replace('bg-green-500', 'bg-red-500');
-                    alert("The room has been deactivated and deleted by the administrator.");
+                    alert("The room has been deactivated by the administrator.");
                     break;
 
                 case 'JOIN_RESULT':
                     if (!msg.success) alert(msg.error || "Failed to join room.");
                     break;
+
+                case 'USER_JOINED':
+                case 'USER_LEFT':
+                    // Optional: Update participant list if you send user arrays
+                    if (msg.users) {
+                        memberList.innerHTML = msg.users.map(u => 
+                            `<div class="flex items-center gap-2">
+                                <div class="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                                <span>${u.username}</span>
+                            </div>`
+                        ).join('');
+                    }
+                    break;
             }
         });
     };
 
+    // Ensure DOM is ready
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', startApp);
     } else {

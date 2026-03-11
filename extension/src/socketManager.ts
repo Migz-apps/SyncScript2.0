@@ -11,61 +11,61 @@ export class SocketManager {
         this.connect();
     }
 
-    private connect() {
+    public connect() {
+        // Close existing if trying to reconnect
+        if (this.socket) {
+            this.socket.removeAllListeners();
+            this.socket.close();
+        }
+
         this.socket = new WebSocket('ws://localhost:4444');
 
         this.socket.on('open', () => {
-            console.log('Connected to SyncScript Server');
+            console.log('[SocketManager] Connected to Signaling Server');
             this.notifyHandlers({ type: 'CONNECTED' });
         });
 
         this.socket.on('message', async (data) => {
             try {
                 const message = JSON.parse(data.toString());
+                console.log('[SocketManager] Received:', message.type);
                 
-                // Track current Room ID for sync logic
                 if (message.type === 'ROOM_CREATED' || (message.type === 'JOIN_RESULT' && message.success)) {
                     this._roomId = message.room?.roomId || message.roomId;
                 }
 
-                // HANDLE FILE SYNCHRONIZATION
                 if (message.type === 'FILE_CHANGE') {
                     await this.applyRemoteChanges(message);
                 } 
                 
-                // Forward everything else to UI/Extension handlers
                 this.notifyHandlers(message);
 
-                // Reset Room ID if terminated
                 if (message.type === 'ROOM_TERMINATED') {
                     this._roomId = null;
                 }
             } catch (err) {
-                console.error("Failed to parse socket message", err);
+                console.error("[SocketManager] Parse Error:", err);
             }
         });
 
+        this.socket.on('error', (err) => {
+            console.error("[SocketManager] Connection Error:", err.message);
+        });
+
         this.socket.on('close', () => {
-            console.log('Disconnected. Retrying in 5s...');
+            console.log('[SocketManager] Disconnected. Retrying...');
             this._roomId = null;
             this.notifyHandlers({ type: 'DISCONNECTED' });
             setTimeout(() => this.connect(), 5000);
         });
     }
 
-    /**
-     * Core Sync Logic: Applies code changes from others to your editor
-     */
     private async applyRemoteChanges(data: any) {
         const uri = vscode.Uri.parse(data.fileUri);
-        
         try {
             const document = await vscode.workspace.openTextDocument(uri);
             const editor = await vscode.window.showTextDocument(document, { preserveFocus: true });
-
-            // Flag as remote so we don't send this change BACK to the server
             this._isApplyingRemoteChange = true;
-
             await editor.edit(editBuilder => {
                 data.changes.forEach((change: any) => {
                     const range = new vscode.Range(
@@ -75,18 +75,23 @@ export class SocketManager {
                     editBuilder.replace(range, change.text);
                 });
             });
-
             this._isApplyingRemoteChange = false;
         } catch (err) {
-            console.error('Failed to apply remote change:', err);
+            console.error('[SocketManager] Sync Error:', err);
             this._isApplyingRemoteChange = false;
         }
     }
 
     public send(data: any) {
-        if (this.socket?.readyState === WebSocket.OPEN) {
-            this.socket.send(JSON.stringify(data));
+        if (this.isConnected()) {
+            this.socket?.send(JSON.stringify(data));
+        } else {
+            vscode.window.showErrorMessage("Not connected to server. Check terminal.");
         }
+    }
+
+    public isConnected(): boolean {
+        return this.socket?.readyState === WebSocket.OPEN;
     }
 
     public disconnect() {
@@ -104,7 +109,6 @@ export class SocketManager {
         this._onMessageHandlers.forEach(h => h(msg));
     }
 
-    // Getters for extension logic
     public isInRoom(): boolean { return this._roomId !== null; }
     public isApplyingRemote(): boolean { return this._isApplyingRemoteChange; }
 }

@@ -17,18 +17,24 @@ export class SyncScriptProvider implements vscode.WebviewViewProvider {
         webviewView.webview.options = {
             enableScripts: true,
             localResourceRoots: [
-                this._extensionUri,
                 vscode.Uri.joinPath(this._extensionUri, 'webview')
             ]
         };
 
         webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
-        // HANDLE MESSAGES FROM WEBVIEW (UI -> Extension -> Server)
         webviewView.webview.onDidReceiveMessage(data => {
+            console.log(`[Provider] UI Command: ${data.command}`);
+            
+            // Critical Check: Connection Status
+            if (!this._socket.isConnected() && data.command !== 'leaveRoom') {
+                vscode.window.showWarningMessage("Reconnecting to server... please try again in a second.");
+                this._socket.connect();
+                return;
+            }
+
             switch (data.command) {
                 case 'createRoom':
-                    // UPDATED: Added roomName to match the Initialize button intent
                     this._socket.send({ 
                         type: 'CREATE_ROOM', 
                         adminName: 'Admin', 
@@ -51,12 +57,10 @@ export class SyncScriptProvider implements vscode.WebviewViewProvider {
                     break;
 
                 case 'deactivateRoom':
-                    // NEW: Handles the admin's request to shut down the room
                     this._socket.send({ type: 'DEACTIVATE_ROOM' });
                     break;
 
                 case 'cancelDeactivation':
-                    // NEW: Handles the admin's request to stop the countdown
                     this._socket.send({ type: 'CANCEL_DEACTIVATION' });
                     break;
             }
@@ -75,10 +79,16 @@ export class SyncScriptProvider implements vscode.WebviewViewProvider {
         
         let htmlContent = fs.readFileSync(htmlUri.fsPath, 'utf8');
         
-        // Inject the webview script URI and the VS Code API
-        return htmlContent
-            .replace(/src="main\.js"/g, `src="${scriptUri}"`)
-            // Ensures TailWind or local CSS links are resolved
-            .replace(/href="output\.css"/g, `href="${webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'webview', 'output.css'))}"`);
+        // Use a more robust regex for script replacement
+        htmlContent = htmlContent.replace(
+            /<script src="main\.js"><\/script>/, 
+            `<script src="${scriptUri}"></script>`
+        );
+
+        // Map Tailwind/CSS
+        const cssUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'webview', 'output.css'));
+        htmlContent = htmlContent.replace('href="output.css"', `href="${cssUri}"`);
+
+        return htmlContent;
     }
 }
