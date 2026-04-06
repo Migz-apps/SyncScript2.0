@@ -4,6 +4,9 @@ import { RoomManager } from './roomManager';
 import { SyncEngine } from './syncEngine';
 import { RoomModel } from './models/roomModel';
 
+const roomManager = new RoomManager();
+const syncEngine = new SyncEngine();
+
 interface ExtendedWebSocket extends WebSocket {
     socketId?: string;
     roomId?: string;
@@ -16,13 +19,11 @@ const server = http.createServer((req: http.IncomingMessage, res: http.ServerRes
 });
 
 const wss = new WebSocketServer({ server });
-const roomManager = new RoomManager();
-const syncEngine = new SyncEngine();
 const deactivationTimers = new Map<string, NodeJS.Timeout>();
-
 const port = 4444;
 
 wss.on('connection', (ws: ExtendedWebSocket) => {
+    // Assign a unique ID to each connection
     ws.socketId = Math.random().toString(36).substring(7);
     
     ws.on('message', async (message: string) => {
@@ -36,7 +37,6 @@ wss.on('connection', (ws: ExtendedWebSocket) => {
                     const roomName: string = data.roomName ?? 'New Room';
                     const socketId = ws.socketId ?? '';
 
-                    // Use ! or ?? to satisfy TS that socketId is a string
                     const newRoom = await roomManager.createRoom(
                         adminName, 
                         roomKey, 
@@ -82,9 +82,34 @@ wss.on('connection', (ws: ExtendedWebSocket) => {
                     break;
                 }
 
+                case 'ARCH_SHARE': {
+                    // Relay architecture to all other peers in the room
+                    if (ws.roomId && ws.socketId) {
+                        syncEngine.broadcastToRoom(wss, ws.roomId, ws.socketId, {
+                            type: 'ARCH_SHARE',
+                            manifest: data.manifest,
+                            sender: ws.username
+                        });
+                        console.log(`[Server] Relayed architecture from ${ws.username}`);
+                    }
+                    break;
+                }
+
+                case 'FILE_CHANGE': {
+                    if (ws.roomId && ws.socketId) {
+                        await RoomModel.updateActivity(ws.roomId);
+                        syncEngine.broadcastToRoom(wss, ws.roomId, ws.socketId, {
+                            type: 'FILE_CHANGE',
+                            fileUri: data.fileUri ?? '',
+                            changes: data.changes ?? [],
+                            sender: ws.username ?? 'Unknown'
+                        });
+                    }
+                    break;
+                }
+
                 case 'DEACTIVATE_ROOM': {
                     if (!ws.roomId || !ws.socketId) return;
-
                     const room = await RoomModel.getRoom(ws.roomId);
                     if (room && room.admin_id === ws.socketId) {
                         syncEngine.broadcastToRoom(wss, ws.roomId, '', { 
@@ -118,18 +143,6 @@ wss.on('connection', (ws: ExtendedWebSocket) => {
                     }
                     break;
                 }
-
-                case 'FILE_CHANGE':
-                    if (ws.roomId && ws.socketId) {
-                        await RoomModel.updateActivity(ws.roomId);
-                        syncEngine.broadcastToRoom(wss, ws.roomId, ws.socketId, {
-                            type: 'FILE_CHANGE',
-                            fileUri: data.fileUri ?? '',
-                            changes: data.changes ?? [],
-                            sender: ws.username ?? 'Unknown'
-                        });
-                    }
-                    break;
             }
         } catch (err) {
             console.error('Operation failed:', err);
@@ -150,6 +163,7 @@ wss.on('connection', (ws: ExtendedWebSocket) => {
     });
 });
 
+// Periodic cleanup of abandoned rooms
 setInterval(async () => {
     try {
         await RoomModel.cleanInactiveRooms();

@@ -1,12 +1,25 @@
 import * as vscode from 'vscode';
 import { SyncScriptProvider } from './provider';
 import { SocketManager } from './socketManager';
+import { PresenceManager } from './services/presenceManager';
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
     console.log('SyncScript is now active!');
 
     const socketManager = new SocketManager();
     const provider = new SyncScriptProvider(context.extensionUri, socketManager);
+
+    context.subscriptions.push(
+        vscode.window.registerWebviewViewProvider(
+            SyncScriptProvider.viewType,
+             provider)
+    );
+
+    const manifest = await PresenceManager.getLocalManifest();
+    socketManager.send({
+        type: 'ARCH_SHARE',
+        manifest: manifest
+    })
 
     // 1. Register Sidebar View
     context.subscriptions.push(

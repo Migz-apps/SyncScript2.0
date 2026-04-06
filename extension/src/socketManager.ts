@@ -12,7 +12,6 @@ export class SocketManager {
     }
 
     public connect() {
-        // Close existing if trying to reconnect
         if (this.socket) {
             this.socket.removeAllListeners();
             this.socket.close();
@@ -28,16 +27,21 @@ export class SocketManager {
         this.socket.on('message', async (data) => {
             try {
                 const message = JSON.parse(data.toString());
-                console.log('[SocketManager] Received:', message.type);
                 
                 if (message.type === 'ROOM_CREATED' || (message.type === 'JOIN_RESULT' && message.success)) {
                     this._roomId = message.room?.roomId || message.roomId;
                 }
 
+                // Handle File Sync
                 if (message.type === 'FILE_CHANGE') {
                     await this.applyRemoteChanges(message);
                 } 
                 
+                // Handle Folder Architecture Broadcasts
+                if (message.type === 'ARCH_SHARE') {
+                    console.log('[SocketManager] Received Remote Architecture');
+                }
+
                 this.notifyHandlers(message);
 
                 if (message.type === 'ROOM_TERMINATED') {
@@ -53,7 +57,6 @@ export class SocketManager {
         });
 
         this.socket.on('close', () => {
-            console.log('[SocketManager] Disconnected. Retrying...');
             this._roomId = null;
             this.notifyHandlers({ type: 'DISCONNECTED' });
             setTimeout(() => this.connect(), 5000);
@@ -77,7 +80,6 @@ export class SocketManager {
             });
             this._isApplyingRemoteChange = false;
         } catch (err) {
-            console.error('[SocketManager] Sync Error:', err);
             this._isApplyingRemoteChange = false;
         }
     }
@@ -85,8 +87,6 @@ export class SocketManager {
     public send(data: any) {
         if (this.isConnected()) {
             this.socket?.send(JSON.stringify(data));
-        } else {
-            vscode.window.showErrorMessage("Not connected to server. Check terminal.");
         }
     }
 

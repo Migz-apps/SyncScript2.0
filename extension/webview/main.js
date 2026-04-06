@@ -127,13 +127,53 @@
                     roomNameDisplay.innerText = roomData.roomName || 'Active Room';
                     statusDot.classList.replace('bg-red-500', 'bg-green-500');
                     
-                    // Show/Hide Admin Controls
                     if (msg.isAdmin) {
                         btnDeactivate.classList.remove('hidden');
                         btnStopDeactivation.classList.remove('hidden');
                     } else {
                         btnDeactivate.classList.add('hidden');
                         btnStopDeactivation.classList.add('hidden');
+                    }
+                    break;
+
+                /** * NEW FEATURE: Architecture Sync Update
+                 * This renders the folder tree based on local vs peer manifest
+                 */
+                case 'ARCH_UPDATE':
+                    if (memberList && msg.manifest && msg.localManifest) {
+                        // Create or clear the architecture container
+                        let archContainer = document.getElementById('arch-sync-tree');
+                        if (!archContainer) {
+                            archContainer = document.createElement('div');
+                            archContainer.id = 'arch-sync-tree';
+                            archContainer.className = "mt-4 pt-4 border-t border-slate-700 space-y-1 font-mono text-[11px]";
+                            memberList.parentNode.appendChild(archContainer);
+                        }
+                        
+                        archContainer.innerHTML = '<p class="text-[10px] text-slate-500 mb-2 uppercase tracking-widest">Folder Sync Map</p>';
+                        
+                        // Merge and sort unique paths
+                        const allPaths = Array.from(new Set([...msg.manifest, ...msg.localManifest])).sort();
+
+                        allPaths.forEach(path => {
+                            const isLocal = msg.localManifest.includes(path);
+                            const isPeer = msg.manifest.includes(path);
+                            
+                            const item = document.createElement('div');
+                            item.className = "flex items-center gap-2 py-0.5";
+
+                            if (isLocal && isPeer) {
+                                // Match: Both users have the file
+                                item.innerHTML = `<span class="text-emerald-500">✔</span> <span class="text-slate-300">${path}</span>`;
+                            } else if (isPeer && !isLocal) {
+                                // Missing locally: Highlight in Red
+                                item.innerHTML = `<span class="text-red-500 font-bold">+</span> <span class="text-red-400 italic">${path} (Missing)</span>`;
+                            } else {
+                                // Local only
+                                item.innerHTML = `<span class="text-slate-500">?</span> <span class="text-slate-500">${path}</span>`;
+                            }
+                            archContainer.appendChild(item);
+                        });
                     }
                     break;
                 
@@ -161,7 +201,6 @@
 
                 case 'USER_JOINED':
                 case 'USER_LEFT':
-                    // Optional: Update participant list if you send user arrays
                     if (msg.users) {
                         memberList.innerHTML = msg.users.map(u => 
                             `<div class="flex items-center gap-2">

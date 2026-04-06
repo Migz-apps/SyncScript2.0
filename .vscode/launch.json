@@ -6,28 +6,48 @@
       "type": "node",
       "request": "launch",
       "cwd": "${workspaceFolder}/signaling",
-      "program": "server.ts", // CHANGED: Using ts-node via launch config
+      "program": "${workspaceFolder}/signaling/src/server.ts",
       "runtimeExecutable": "nodemon",
       "restart": true,
-      "console": "integratedTerminal"
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
     },
     {
-      "name": "SyncScript Extension",
+      "name": "SyncScript Client A",
       "type": "extensionHost",
       "request": "launch",
       "runtimeExecutable": "${execPath}",
       "args": [
-          "--extensionDevelopmentPath=${workspaceFolder}/extension"
+        "--extensionDevelopmentPath=${workspaceFolder}/extension",
+        "--user-data-dir=${workspaceFolder}/.vscode/client-a"
       ],
       "outFiles": [
-          "${workspaceFolder}/extension/out/**/*.js"
+        "${workspaceFolder}/extension/out/**/*.js"
+      ]
+    },
+    {
+      "name": "SyncScript Client B",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/extension",
+        "--user-data-dir=${workspaceFolder}/.vscode/client-b"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/extension/out/**/*.js"
       ]
     }
   ],
   "compounds": [
     {
-      "name": "Full Project Dev",
-      "configurations": ["Run Server", "SyncScript Extension"]
+      "name": "Debug Full System",
+      "configurations": [
+        "Run Server",
+        "SyncScript Client A",
+        "SyncScript Client B"
+      ],
+      "stopAll": true
     }
   ]
 }
