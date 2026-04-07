@@ -7,12 +7,12 @@
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 </head>
 <body class="bg-[#1e1e1e] text-gray-200 p-4 font-sans text-sm select-none">
+
     <div id="deactivation-overlay" class="hidden fixed inset-0 bg-black/90 flex flex-col items-center justify-center z-50 p-6 text-center transition-all">
         <div class="bg-gray-900 border border-red-500 p-8 rounded-lg shadow-2xl max-w-xs w-full">
             <h2 class="text-red-500 font-bold text-xl mb-2">Deactivating Room</h2>
             <p class="text-gray-400 text-xs mb-4">The admin has initiated a permanent shutdown of this room.</p>
             <div id="countdown-timer" class="text-5xl font-mono font-bold text-white mb-6">02:00</div>
-            
             <button id="btn-stop-deactivation" class="hidden w-full bg-gray-700 hover:bg-gray-600 text-white py-2 rounded font-bold transition">
                 STOP DEACTIVATION
             </button>
@@ -57,7 +57,15 @@
                     <button onclick="copyId()" class="text-[10px] bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded border border-gray-600 transition">Copy</button>
                 </div>
             </div>
-            
+
+            <div class="space-y-2">
+                <button id="btn-sync-check" class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-bold transition-colors shadow-lg">
+                    Check Folder Sync
+                </button>
+                <div id="arch-sync-tree" class="hidden mt-2 pt-4 border-t border-gray-700 space-y-1 font-mono text-[11px]">
+                    </div>
+            </div>
+
             <div class="space-y-1">
                 <p class="text-[10px] text-gray-500 uppercase">Participants</p>
                 <div id="member-list" class="space-y-1 mt-1 text-xs text-gray-300">

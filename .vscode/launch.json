@@ -13,26 +13,26 @@
       "internalConsoleOptions": "neverOpen"
     },
     {
-      "name": "SyncScript Client A",
+      "name": "SyncScript (VS Code Window)",
       "type": "extensionHost",
       "request": "launch",
       "runtimeExecutable": "${execPath}",
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}/extension",
-        "--user-data-dir=${workspaceFolder}/.vscode/client-a"
+        "--user-data-dir=${workspaceFolder}/.vscode/client-vscode"
       ],
       "outFiles": [
         "${workspaceFolder}/extension/out/**/*.js"
       ]
     },
     {
-      "name": "SyncScript Client B",
+      "name": "SyncScript (Cursor Window)",
       "type": "extensionHost",
       "request": "launch",
-      "runtimeExecutable": "${execPath}",
+      "runtimeExecutable": "cursor",
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}/extension",
-        "--user-data-dir=${workspaceFolder}/.vscode/client-b"
+        "--user-data-dir=${workspaceFolder}/.vscode/client-cursor"
       ],
       "outFiles": [
         "${workspaceFolder}/extension/out/**/*.js"
@@ -41,11 +41,11 @@
   ],
   "compounds": [
     {
-      "name": "Debug Full System",
+      "name": "Debug SyncScript (VS Code + Cursor + Server)",
       "configurations": [
         "Run Server",
-        "SyncScript Client A",
-        "SyncScript Client B"
+        "SyncScript (VS Code Window)",
+        "SyncScript (Cursor Window)"
       ],
       "stopAll": true
     }
