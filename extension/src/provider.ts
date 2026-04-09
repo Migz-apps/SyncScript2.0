@@ -41,6 +41,14 @@ export class SyncScriptProvider implements vscode.WebviewViewProvider {
         webviewView.webview.onDidReceiveMessage(async (data: any) => {
             console.log(`[Provider] UI Command: ${data.command}`);
 
+            // Workspace Validation: Prevent room actions if no folder is open
+            const hasWorkspace = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0;
+
+            if ((data.command === 'createRoom' || data.command === 'joinRoom') && !hasWorkspace) {
+                this.updateUI({ type: 'WORKSPACE_ERROR' });
+                return;
+            }
+
             // Ensure connection before processing commands (except leaveRoom).
             if (!this._socket.isConnected() && data.command !== 'leaveRoom') {
                 vscode.window.showWarningMessage("Connecting to SyncScript server...");
@@ -78,9 +86,6 @@ export class SyncScriptProvider implements vscode.WebviewViewProvider {
                     this._socket.send({ type: 'CANCEL_DEACTIVATION' });
                     break;
 
-                /**
-                 * Handler for the 'checkSync' command to trigger workspace scan.
-                 */
                 case 'checkSync':
                     try {
                         const localManifest = await PresenceManager.getLocalManifest();

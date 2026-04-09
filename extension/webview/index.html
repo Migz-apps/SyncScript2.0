@@ -5,6 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SyncScript</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        /* Essential styling for the validation popup */
+        #workspace-error-popup {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #ef4444; /* red-500 */
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: bold;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+
+        #workspace-error-popup.hidden {
+            display: none;
+            opacity: 0;
+            bottom: 10px;
+        }
+    </style>
 </head>
 <body class="bg-[#1e1e1e] text-gray-200 p-4 font-sans text-sm select-none">
 
@@ -63,13 +91,13 @@
                     Check Folder Sync
                 </button>
                 <div id="arch-sync-tree" class="hidden mt-2 pt-4 border-t border-gray-700 space-y-1 font-mono text-[11px]">
-                    </div>
+                </div>
             </div>
 
             <div class="space-y-1">
                 <p class="text-[10px] text-gray-500 uppercase">Participants</p>
                 <div id="member-list" class="space-y-1 mt-1 text-xs text-gray-300">
-                    </div>
+                </div>
             </div>
 
             <div class="pt-4 space-y-2">
@@ -78,12 +106,20 @@
             </div>
         </div>
     </div>
+    
+    <div id="workspace-error-popup" class="hidden">
+        <span>⚠️</span>
+        <span>Open a folder first</span>
+    </div>
 
     <script src="main.js"></script>
     <script>
         function copyId() {
-            const id = document.getElementById('active-room-id').innerText;
-            navigator.clipboard.writeText(id);
+            const idElement = document.getElementById('active-room-id');
+            if (idElement) {
+                const id = idElement.innerText;
+                navigator.clipboard.writeText(id);
+            }
         }
     </script>
 </body>

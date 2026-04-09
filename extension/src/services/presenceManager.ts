@@ -8,16 +8,32 @@ export class PresenceManager {
      */
     public static async getLocalManifest(): Promise<string[]> {
         const workspaceFolders = vscode.workspace.workspaceFolders;
-        if (!workspaceFolders) return [];
+        
+        // Safety check to prevent crashing if no folder is open
+        if (!workspaceFolders || workspaceFolders.length === 0) {
+            return [];
+        }
 
-        const rootPath = workspaceFolders[0].uri.fsPath;
-        const pattern = new vscode.RelativePattern(rootPath, '**/*');
-        
-        // Find all files, excluding heavy folders
-        const files = await vscode.workspace.findFiles(pattern, '**/node_modules/**, **/.git/**');
-        
-        return files.map(file => {
-            return path.relative(rootPath, file.fsPath).replace(/\\/g, '/');
-        });
+        try {
+            const rootPath = workspaceFolders[0].uri.fsPath;
+            const pattern = new vscode.RelativePattern(rootPath, '**/*');
+            
+            /**
+             * Find all files, excluding heavy folders.
+             * This uses the VS Code built-in search engine which is very fast.
+             */
+            const files = await vscode.workspace.findFiles(
+                pattern, 
+                '**/{node_modules,.git,dist,out,build}/**'
+            );
+            
+            // Map the absolute paths to clean relative paths for comparison
+            return files.map(file => {
+                return path.relative(rootPath, file.fsPath).replace(/\\/g, '/');
+            });
+        } catch (error) {
+            console.error("Error generating local manifest:", error);
+            return [];
+        }
     }
 }

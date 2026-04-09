@@ -9,12 +9,6 @@ export async function activate(context: vscode.ExtensionContext) {
     const socketManager = new SocketManager();
     const provider = new SyncScriptProvider(context.extensionUri, socketManager);
 
-    context.subscriptions.push(
-        vscode.window.registerWebviewViewProvider(
-            SyncScriptProvider.viewType,
-             provider)
-    );
-
     const manifest = await PresenceManager.getLocalManifest();
     socketManager.send({
         type: 'ARCH_SHARE',
