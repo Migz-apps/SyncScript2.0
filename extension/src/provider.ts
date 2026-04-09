@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { SocketManager } from './socketManager';
 import { PresenceManager } from './services/presenceManager';
+import { FileScanner } from './utils/fileScanner';
 
 export class SyncScriptProvider implements vscode.WebviewViewProvider {
     /**
@@ -88,24 +89,24 @@ export class SyncScriptProvider implements vscode.WebviewViewProvider {
 
                 case 'checkSync':
                     try {
+                        // Use the PresenceManager to get the current state [cite: 132]
                         const localManifest = await PresenceManager.getLocalManifest();
 
-                        // Broadcast local manifest to peers.
                         this._socket.send({
                             type: 'ARCH_SHARE',
                             manifest: localManifest
                         });
 
-                        // Update local UI state immediately.
                         this.updateUI({
                             type: 'ARCH_UPDATE',
-                            manifest: [],
+                            manifest: [], // Peers will fill this via socket later
                             localManifest: localManifest
                         });
                     } catch (err) {
                         vscode.window.showErrorMessage("Workspace scan failed.");
                     }
                     break;
+
             }
         });
     }
