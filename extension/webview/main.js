@@ -31,13 +31,56 @@
         const btnSyncCheck = document.getElementById('btn-sync-check');
         const archContainer = document.getElementById('arch-sync-tree');
         const workspacePopup = document.getElementById('workspace-error-popup');
+        const errorText = workspacePopup?.querySelector('span'); // Reference to the text inside popup
         
+        /**
+         * Dynamic Routing: Switches views based on ID
+         */
         const showView = (id) => {
-            console.log(`Switching to view: ${id}`); 
+            console.log(`[UI] Routing to: ${id}`); 
             Object.keys(views).forEach(v => {
                 if (views[v]) views[v].classList.add('hidden'); 
             });
             if (views[id]) views[id].classList.remove('hidden'); 
+        };
+
+        /**
+         * State Update Handler: Logic for UI Feedback and Automatic Routing
+         */
+        const handleStateUpdate = (data) => {
+            const { state, status } = data;
+
+            // 1. Handle Workspace Feedback
+            if (!status.hasFolder) {
+                if (workspacePopup) {
+                    workspacePopup.classList.remove('hidden');
+                    if (errorText) {
+                        errorText.innerText = status.errorReason === 'NO_FOLDER' 
+                            ? "Please open a folder to use SyncScript." 
+                            : "Sync unavailable: Check workspace.";
+                    }
+                }
+            } else {
+                if (workspacePopup) workspacePopup.classList.add('hidden');
+            }
+
+            // 2. Dynamic Routing based on Connection State
+            switch (state) {
+                case 'DISCONNECTED':
+                    statusDot.className = "w-2 h-2 rounded-full bg-red-500";
+                    showView('selection');
+                    break;
+                case 'CONNECTED_NO_ROOM':
+                    statusDot.className = "w-2 h-2 rounded-full bg-yellow-500";
+                    // Only go back to selection if we aren't currently in create/join menus
+                    const currentView = Object.keys(views).find(key => !views[key].classList.contains('hidden'));
+                    if (currentView === 'active') showView('selection');
+                    break;
+                case 'IN_ROOM':
+                    statusDot.className = "w-2 h-2 rounded-full bg-green-500";
+                    showView('active');
+                    break;
+            }
         };
 
         const startUIInterval = (seconds) => {
@@ -47,7 +90,9 @@
             const updateDisplay = () => {
                 const mins = Math.floor(remaining / 60); 
                 const secs = remaining % 60; 
-                countdownTimer.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`; 
+                if (countdownTimer) {
+                    countdownTimer.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`; 
+                }
             };
 
             updateDisplay(); 
@@ -80,8 +125,6 @@
                 alert("Room Name and Password are required."); 
                 return; 
             }
-
-            console.log("Sending 'createRoom' command..."); 
             vscode.postMessage({ command: 'createRoom', roomName, key }); 
         });
 
@@ -95,8 +138,6 @@
                 alert("Please fill in all joining fields."); 
                 return; 
             }
-
-            console.log("Sending 'joinRoom' command..."); 
             vscode.postMessage({ command: 'joinRoom', roomId, name, key }); 
         });
 
@@ -104,7 +145,6 @@
         document.getElementById('btn-leave').addEventListener('click', () => {
             vscode.postMessage({ command: 'leaveRoom' }); 
             showView('selection'); 
-            statusDot.classList.replace('bg-green-500', 'bg-red-500'); 
         });
 
         // Deactivation (Admin Only)
@@ -132,15 +172,18 @@
         // Inbound Message Handler
         window.addEventListener('message', event => {
             const msg = event.data; 
-            console.log("Received message from Extension:", msg.type); 
+            console.log("[Extension -> UI]:", msg.type); 
 
             switch(msg.type) {
+                case 'STATE_UPDATE':
+                    handleStateUpdate(msg);
+                    break;
+
                 case 'WORKSPACE_ERROR':
+                    // Keep existing fallback if STATE_UPDATE isn't used
                     if (workspacePopup) {
                         workspacePopup.classList.remove('hidden');
-                        setTimeout(() => {
-                            workspacePopup.classList.add('hidden');
-                        }, 3000);
+                        setTimeout(() => workspacePopup.classList.add('hidden'), 3000);
                     }
                     break;
 
@@ -148,42 +191,29 @@
                 case 'ROOM_CREATED': 
                     showView('active'); 
                     const roomData = msg.room || msg; 
-                    roomIdDisplay.innerText = roomData.roomId; 
+                    roomIdDisplay.innerText = roomData.roomId || roomData.id; 
                     roomNameDisplay.innerText = roomData.roomName || 'Active Room'; 
-                    statusDot.classList.replace('bg-red-500', 'bg-green-500'); 
                     
                     if (msg.isAdmin) {
-                        btnDeactivate.classList.remove('hidden'); 
-                        btnStopDeactivation.classList.remove('hidden'); 
+                        btnDeactivate?.classList.remove('hidden'); 
+                        btnStopDeactivation?.classList.remove('hidden'); 
                     } else {
-                        btnDeactivate.classList.add('hidden'); 
-                        btnStopDeactivation.classList.add('hidden'); 
+                        btnDeactivate?.classList.add('hidden'); 
+                        btnStopDeactivation?.classList.add('hidden'); 
                     }
                     break;
                 
                 case 'ARCH_UPDATE':
-                    if (archContainer && msg.manifest && msg.localManifest) {
+                    if (window.TreeViewRenderer && archContainer && msg.localManifest) {
                         archContainer.classList.remove('hidden');
-                        archContainer.innerHTML = '<p class="text-[10px] text-slate-500 mb-2 uppercase tracking-widest">Folder Sync Map</p>';
-
-                        const allPaths = Array.from(new Set([...msg.manifest, ...msg.localManifest])).sort();
-
-                        allPaths.forEach(path => {
-                            const isLocal = msg.localManifest.includes(path); 
-                            const isPeer = msg.manifest.includes(path); 
-                            
-                            const item = document.createElement('div'); 
-                            item.className = "flex items-center gap-2 py-0.5"; 
-
-                            if (isLocal && isPeer) {
-                                item.innerHTML = `<span class="text-emerald-500">✔</span> <span class="text-slate-300">${path}</span>`; 
-                            } else if (isPeer && !isLocal) {
-                                item.innerHTML = `<span class="text-red-500 font-bold">+</span> <span class="text-red-400 italic">${path} (Missing)</span>`; 
-                            } else {
-                                item.innerHTML = `<span class="text-slate-500">?</span> <span class="text-slate-500">${path}</span>`; 
-                            }
-                            archContainer.appendChild(item); 
-                        });
+                        // Combine manifests to show differences
+                        const allPaths = Array.from(new Set([...(msg.manifest || []), ...msg.localManifest])).sort();
+                        const diff = allPaths.map(p => ({
+                            path: p,
+                            status: (msg.localManifest.includes(p) && msg.manifest?.includes(p)) ? 'match' :
+                                    (msg.manifest?.includes(p)) ? 'missing-locally' : 'extra-locally'
+                        }));
+                        window.TreeViewRenderer.render(archContainer, diff);
                     }
                     break;
 
@@ -201,7 +231,6 @@
                     deactivationOverlay.classList.add('hidden'); 
                     clearInterval(countdownInterval); 
                     showView('selection'); 
-                    statusDot.classList.replace('bg-green-500', 'bg-red-500'); 
                     alert("The room has been deactivated by the administrator."); 
                     break;
 
@@ -211,7 +240,7 @@
 
                 case 'USER_JOINED': 
                 case 'USER_LEFT': 
-                    if (msg.users) {
+                    if (msg.users && memberList) {
                         memberList.innerHTML = msg.users.map(u => 
                             `<div class="flex items-center gap-2">
                                 <div class="w-1.5 h-1.5 bg-green-500 rounded-full"></div>

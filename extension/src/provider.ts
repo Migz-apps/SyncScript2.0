@@ -2,12 +2,8 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { SocketManager } from './socketManager';
 import { PresenceManager } from './services/presenceManager';
-import { FileScanner } from './utils/fileScanner';
 
 export class SyncScriptProvider implements vscode.WebviewViewProvider {
-    /**
-     * Matches the ID in package.json to ensure the sidebar loads correctly.
-     */
     public static readonly viewType = 'syncscript.sidebar';
 
     private _view?: vscode.WebviewView;
@@ -15,11 +11,13 @@ export class SyncScriptProvider implements vscode.WebviewViewProvider {
     constructor(
         private readonly _extensionUri: vscode.Uri,
         private readonly _socket: SocketManager
-    ) {}
+    ) {
+        // Listen for socket connection changes to trigger dynamic routing in UI
+        this._socket.onStatusChange(() => {
+            this.broadcastState();
+        });
+    }
 
-    /**
-     * Called when the sidebar view is first loaded or becomes visible.
-     */
     public resolveWebviewView(
         webviewView: vscode.WebviewView,
         _context: vscode.WebviewViewResolveContext,
@@ -36,23 +34,24 @@ export class SyncScriptProvider implements vscode.WebviewViewProvider {
 
         webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
-        /**
-         * Handle messages sent FROM the Webview UI TO the Extension.
-         */
         webviewView.webview.onDidReceiveMessage(async (data: any) => {
             console.log(`[Provider] UI Command: ${data.command}`);
 
-            // Workspace Validation: Prevent room actions if no folder is open
+            // Workspace Validation: Logic to tell user WHY they can't sync
             const hasWorkspace = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0;
 
             if ((data.command === 'createRoom' || data.command === 'joinRoom') && !hasWorkspace) {
-                this.updateUI({ type: 'WORKSPACE_ERROR' });
+                this.updateUI({ 
+                    type: 'WORKSPACE_ERROR',
+                    reason: 'NO_FOLDER',
+                    message: 'You must open a folder in VS Code before joining a room.'
+                });
                 return;
             }
 
             // Ensure connection before processing commands (except leaveRoom).
             if (!this._socket.isConnected() && data.command !== 'leaveRoom') {
-                vscode.window.showWarningMessage("Connecting to SyncScript server...");
+                this.updateUI({ type: 'STATE_UPDATE', state: 'CONNECTING' });
                 this._socket.connect();
             }
 
@@ -77,6 +76,7 @@ export class SyncScriptProvider implements vscode.WebviewViewProvider {
 
                 case 'leaveRoom':
                     this._socket.disconnect();
+                    this.broadcastState(); // Force UI back to home
                     break;
 
                 case 'deactivateRoom':
@@ -89,9 +89,7 @@ export class SyncScriptProvider implements vscode.WebviewViewProvider {
 
                 case 'checkSync':
                     try {
-                        // Use the PresenceManager to get the current state [cite: 132]
                         const localManifest = await PresenceManager.getLocalManifest();
-
                         this._socket.send({
                             type: 'ARCH_SHARE',
                             manifest: localManifest
@@ -99,53 +97,57 @@ export class SyncScriptProvider implements vscode.WebviewViewProvider {
 
                         this.updateUI({
                             type: 'ARCH_UPDATE',
-                            manifest: [], // Peers will fill this via socket later
+                            manifest: [],
                             localManifest: localManifest
                         });
                     } catch (err) {
                         vscode.window.showErrorMessage("Workspace scan failed.");
                     }
                     break;
-
+                
+                // New: Requesting initial state when webview loads
+                case 'getInitialState':
+                    this.broadcastState();
+                    break;
             }
         });
     }
 
     /**
-     * Sends data to the webview (main.js).
+     * Broadcasts the current system state to the UI to handle Dynamic Routing.
      */
+    private broadcastState(): void {
+        const hasWorkspace = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0;
+        let state = 'DISCONNECTED';
+
+        if (this._socket.isConnected()) {
+            state = this._socket.isInRoom() ? 'IN_ROOM' : 'CONNECTED_NO_ROOM';
+        }
+
+        this.updateUI({
+            type: 'STATE_UPDATE',
+            state: state,
+            status: { hasFolder: hasWorkspace }
+        });
+    }
+
     public updateUI(message: any): void {
         if (this._view) {
             this._view.webview.postMessage(message);
-        } else {
-            console.error("[Provider] View is not visible.");
         }
     }
 
-    /**
-     * Injects the correct VS Code URIs into the HTML file.
-     */
     private _getHtmlForWebview(webview: vscode.Webview): string {
         const htmlUri = vscode.Uri.joinPath(this._extensionUri, 'webview', 'index.html');
-        const scriptUri = webview.asWebviewUri(
-            vscode.Uri.joinPath(this._extensionUri, 'webview', 'main.js')
-        );
-        const cssUri = webview.asWebviewUri(
-            vscode.Uri.joinPath(this._extensionUri, 'webview', 'output.css')
-        );
+        const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'webview', 'main.js'));
+        const treeViewUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'webview', 'treeView.js'));
+        const cssUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'webview', 'output.css'));
 
         let htmlContent = fs.readFileSync(htmlUri.fsPath, 'utf8');
 
-        // Replace relative paths with VS Code resource URIs.
-        htmlContent = htmlContent.replace(
-            /<script\s+src="main\.js"><\/script>/i,
-            `<script src="${scriptUri}"></script>`
-        );
-
-        htmlContent = htmlContent.replace(
-            /href="output\.css"/i,
-            `href="${cssUri}"`
-        );
+        htmlContent = htmlContent.replace(/<script\s+src="treeView\.js"><\/script>/i, `<script src="${treeViewUri}"></script>`);
+        htmlContent = htmlContent.replace(/<script\s+src="main\.js"><\/script>/i, `<script src="${scriptUri}"></script>`);
+        htmlContent = htmlContent.replace(/href="output\.css"/i, `href="${cssUri}"`);
 
         return htmlContent;
     }
