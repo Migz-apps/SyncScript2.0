@@ -24,14 +24,15 @@
       ]
     },
     {
-      "name": "SyncScript (Cursor Window)",
+      "name": "SyncScript (Antigravity Window)",
       "type": "extensionHost",
       "request": "launch",
-      "runtimeExecutable": "cursor",
-      "preLaunchTask": "watch-extension",
+      "runtimeExecutable": "C:\\Users\\user\\AppData\\Local\\Programs\\Antigravity\\bin\\antigravity.cmd",
+      "preLaunchTask": "",
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}/extension",
-        "--user-data-dir=${workspaceFolder}/.vscode/client-cursor"
+        "--user-data-dir=${workspaceFolder}/.vscode/client-cursor",
+        "--new-window"
       ],
       "outFiles": [
         "${workspaceFolder}/extension/out/**/*.js"
@@ -40,12 +41,13 @@
   ],
   "compounds": [
     {
-      "name": "Debug SyncScript (VS Code + Cursor)",
+      "name": "Debug SyncScript (VS Code + Antigravity)",
       "configurations": [
         "SyncScript (VS Code Window)",
-        "SyncScript (Cursor Window)"
+        "SyncScript (Antigravity Window)"
       ],
-      "stopAll": true
+      "stopAll": true,
+      "preLaunchTask": "watch-extension"
     }
   ]
 }
