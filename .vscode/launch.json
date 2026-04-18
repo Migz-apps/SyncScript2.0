@@ -7,32 +7,20 @@
       "request": "launch",
       "cwd": "${workspaceFolder}/signaling",
       "program": "${workspaceFolder}/signaling/src/server.ts",
-      "console": "integratedTerminal"
+      "runtimeExecutable": "nodemon",
+      "restart": true,
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
     },
     {
-      "name": "SyncScript (VS Code Window)",
+      "name": "SyncScript (VS Code Extension Host)",
       "type": "extensionHost",
       "request": "launch",
       "runtimeExecutable": "${execPath}",
       "preLaunchTask": "watch-extension",
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}/extension",
-        "--user-data-dir=${workspaceFolder}/.vscode/client-vscode"
-      ],
-      "outFiles": [
-        "${workspaceFolder}/extension/out/**/*.js"
-      ]
-    },
-    {
-      "name": "SyncScript (Antigravity Window)",
-      "type": "extensionHost",
-      "request": "launch",
-      "runtimeExecutable": "C:\\Users\\user\\AppData\\Local\\Programs\\Antigravity\\bin\\antigravity.cmd",
-      "preLaunchTask": "",
-      "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}/extension",
-        "--user-data-dir=${workspaceFolder}/.vscode/client-cursor",
-        "--new-window"
+        "--user-data-dir=${workspaceFolder}/.vscode/client-vscode1"
       ],
       "outFiles": [
         "${workspaceFolder}/extension/out/**/*.js"
@@ -41,10 +29,10 @@
   ],
   "compounds": [
     {
-      "name": "Debug SyncScript (VS Code + Antigravity)",
+      "name": "Debug SyncScript (Server + Extension Host)",
       "configurations": [
-        "SyncScript (VS Code Window)",
-        "SyncScript (Antigravity Window)"
+        "Run Server",
+        "SyncScript (VS Code Extension Host)"
       ],
       "stopAll": true,
       "preLaunchTask": "watch-extension"

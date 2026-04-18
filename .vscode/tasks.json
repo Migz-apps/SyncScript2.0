@@ -19,7 +19,7 @@
       },
       "isBackground": true,
       "runOptions": {
-        "instanceLimit": 1
+        "instanceLimit": 10
       },
       "problemMatcher": {
         "owner": "typescript",
