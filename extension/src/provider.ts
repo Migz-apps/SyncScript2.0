@@ -100,7 +100,7 @@ export class SyncScriptProvider implements vscode.WebviewViewProvider {
                             manifest: [],
                             localManifest: localManifest
                         });
-                    } catch (err) {
+                    } catch {
                         vscode.window.showErrorMessage("Workspace scan failed.");
                     }
                     break;

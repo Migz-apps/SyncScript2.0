@@ -1,0 +1,141 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: syncscript-signaling-config
+  namespace: syncscript
+data:
+  PORT: "4444"
+  REDIS_KEY_PREFIX: "syncscript"
+  LOG_LEVEL: "info"
+  ROOM_TTL_MS: "604800000"
+  DEACTIVATION_MS: "120000"
+  HEARTBEAT_MS: "30000"
+  CLEANUP_INTERVAL_MS: "30000"
+  METRICS_ENABLED: "true"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: syncscript-signaling-secret
+  namespace: syncscript
+type: Opaque
+stringData:
+  REDIS_URL: redis://syncscript-redis:6379
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: syncscript-signaling
+  namespace: syncscript
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: syncscript-signaling
+  template:
+    metadata:
+      labels:
+        app: syncscript-signaling
+      annotations:
+        prometheus.io/path: /metrics
+        prometheus.io/port: "4444"
+        prometheus.io/scrape: "true"
+    spec:
+      containers:
+        - name: signaling
+          image: ghcr.io/OWNER/REPO/syncscript-signaling:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 4444
+              name: http
+          envFrom:
+            - configMapRef:
+                name: syncscript-signaling-config
+            - secretRef:
+                name: syncscript-signaling-secret
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          startupProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            failureThreshold: 12
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 150m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: syncscript-signaling
+  namespace: syncscript
+spec:
+  selector:
+    app: syncscript-signaling
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: syncscript-signaling
+  namespace: syncscript
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: syncscript-signaling
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 75
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: syncscript-signaling
+  namespace: syncscript
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: syncscript.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: syncscript-signaling
+                port:
+                  number: 80

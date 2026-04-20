@@ -1,0 +1,114 @@
+services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  signaling:
+    build:
+      context: .
+      dockerfile: signaling/Dockerfile
+    image: syncscript-signaling:local
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      PORT: 4444
+      REDIS_URL: redis://redis:6379
+      REDIS_KEY_PREFIX: syncscript
+      LOG_LEVEL: info
+      ROOM_TTL_MS: 604800000
+      DEACTIVATION_MS: 120000
+      HEARTBEAT_MS: 30000
+      CLEANUP_INTERVAL_MS: 30000
+      METRICS_ENABLED: "true"
+    ports:
+      - "4444:4444"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4444/health/ready').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  mock-host:
+    image: syncscript-signaling:local
+    depends_on:
+      signaling:
+        condition: service_healthy
+    command: ["node", "dist/scripts/mockClient.js"]
+    environment:
+      SIGNALING_URL: ws://signaling:4444
+      CLIENT_MODE: host
+      USERNAME: Host
+      ROOM_NAME: Compose Smoke Test
+      ROOM_KEY: syncscript
+      ROOM_FILE: /shared/room.json
+      EXIT_AFTER_MS: 20000
+    volumes:
+      - mock-shared:/shared
+    profiles:
+      - test
+
+  mock-guest:
+    image: syncscript-signaling:local
+    depends_on:
+      signaling:
+        condition: service_healthy
+      mock-host:
+        condition: service_started
+    command: ["node", "dist/scripts/mockClient.js"]
+    environment:
+      SIGNALING_URL: ws://signaling:4444
+      CLIENT_MODE: guest
+      USERNAME: Guest
+      ROOM_KEY: syncscript
+      ROOM_FILE: /shared/room.json
+      EXIT_AFTER_MS: 20000
+    volumes:
+      - mock-shared:/shared
+    profiles:
+      - test
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    depends_on:
+      signaling:
+        condition: service_healthy
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    profiles:
+      - observability
+
+  grafana:
+    image: grafana/grafana:11.1.4
+    depends_on:
+      prometheus:
+        condition: service_started
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+    profiles:
+      - observability
+
+volumes:
+  grafana-data:
+  mock-shared:
+  redis-data:

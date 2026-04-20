@@ -23,6 +23,14 @@ export async function activate(context: vscode.ExtensionContext) {
         )
     );
 
+    context.subscriptions.push(
+        vscode.workspace.onDidChangeConfiguration((event) => {
+            if (event.affectsConfiguration('syncscript.signalingUrl')) {
+                socketManager.reconnect();
+            }
+        })
+    );
+
     // 2. Handle Server Responses for UI & Admin Logic
     socketManager.onMessage((msg) => {
         switch (msg.type) {

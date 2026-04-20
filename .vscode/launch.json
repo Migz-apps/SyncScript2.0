@@ -3,24 +3,38 @@
   "configurations": [
     {
       "name": "Run Server",
-      "type": "node",
+      "type": "node-terminal",
       "request": "launch",
       "cwd": "${workspaceFolder}/signaling",
-      "program": "${workspaceFolder}/signaling/src/server.ts",
-      "runtimeExecutable": "nodemon",
-      "restart": true,
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen"
+      "command": "npm.cmd run dev"
     },
     {
-      "name": "SyncScript (VS Code Extension Host)",
+      "name": "SyncScript Client 1",
       "type": "extensionHost",
       "request": "launch",
       "runtimeExecutable": "${execPath}",
-      "preLaunchTask": "watch-extension",
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}/extension",
-        "--user-data-dir=${workspaceFolder}/.vscode/client-vscode1"
+        "--user-data-dir=${workspaceFolder}/.vscode/client-vscode1",
+        "--extensions-dir=${workspaceFolder}/.vscode/client-extensions1",
+        "--new-window",
+        "${workspaceFolder}"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/extension/out/**/*.js"
+      ]
+    },
+    {
+      "name": "SyncScript Client 2",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/extension",
+        "--user-data-dir=${workspaceFolder}/.vscode/client-vscode2",
+        "--extensions-dir=${workspaceFolder}/.vscode/client-extensions2",
+        "--new-window",
+        "${workspaceFolder}"
       ],
       "outFiles": [
         "${workspaceFolder}/extension/out/**/*.js"
@@ -29,13 +43,14 @@
   ],
   "compounds": [
     {
-      "name": "Debug SyncScript (Server + Extension Host)",
+      "name": "Debug SyncScript",
+      "preLaunchTask": "build-extension",
       "configurations": [
         "Run Server",
-        "SyncScript (VS Code Extension Host)"
+        "SyncScript Client 1",
+        "SyncScript Client 2"
       ],
-      "stopAll": true,
-      "preLaunchTask": "watch-extension"
+      "stopAll": true
     }
   ]
 }

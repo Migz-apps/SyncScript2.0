@@ -1,25 +1,22 @@
 {
-  "name": "syncscript-signaling",
+  "name": "syncscript-workspace",
   "version": "1.0.0",
-  "description": "Signaling server for SyncScript P2P",
-  "main": "server.ts",
+  "private": true,
+  "description": "Workspace automation for the SyncScript extension and signaling server",
+  "workspaces": [
+    "extension",
+    "signaling"
+  ],
   "scripts": {
-    "start": "ts-node src/server.ts",
-    "dev": "nodemon src/server.ts",
-    "build": "tsc"
-  },
-  "dependencies": {
-    "ws": "^8.16.0",
-    "sqlite3": "^5.1.7",
-    "uuid": "^9.0.1"
+    "lint": "eslint extension/src/**/*.ts signaling/src/**/*.ts",
+    "typecheck": "npm run typecheck --workspace extension && npm run typecheck --workspace signaling",
+    "build": "npm run build --workspace signaling && npm run compile --workspace extension && npm run tailwind:build --workspace extension",
+    "package:vsix": "npm run package:vsix --workspace extension"
   },
   "devDependencies": {
-    "@types/node": "^20.11.0",
-    "@types/ws": "^8.5.10",
-    "@types/sqlite3": "^3.1.11",
-    "@types/uuid": "^9.0.7",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.3.3",
-    "nodemon": "^3.0.3"
+    "@eslint/js": "^9.25.0",
+    "eslint": "^9.25.0",
+    "globals": "^16.0.0",
+    "typescript-eslint": "^8.30.1"
   }
 }

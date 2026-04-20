@@ -8,6 +8,7 @@ Thumbs.db
 # --- Node.js / Dependencies ---
 node_modules/
 package-lock.json
+.npm-cache/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -20,6 +21,7 @@ signaling/dist/
 
 # --- Extension Specific ---
 *.vsix
+artifacts/
 .vscode-test/
 
 # --- Signaling Server Data ---

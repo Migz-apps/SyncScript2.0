@@ -4,7 +4,7 @@
     {
       "label": "build-extension",
       "type": "shell",
-      "command": "npm run compile",
+      "command": "npm.cmd run compile",
       "options": {
         "cwd": "${workspaceFolder}/extension"
       },
@@ -13,11 +13,15 @@
     {
       "label": "watch-extension",
       "type": "shell",
-      "command": "npm run watch",
+      "command": "npm.cmd run watch",
       "options": {
         "cwd": "${workspaceFolder}/extension"
       },
       "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
       "runOptions": {
         "instanceLimit": 10
       },
@@ -44,7 +48,7 @@
     {
       "label": "run-server",
       "type": "shell",
-      "command": "npx nodemon src/server.ts",
+      "command": "npm.cmd run dev",
       "options": {
         "cwd": "${workspaceFolder}/signaling"
       },
