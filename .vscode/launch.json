@@ -15,14 +15,11 @@
       "runtimeExecutable": "${execPath}",
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}/extension",
-        "--user-data-dir=${workspaceFolder}/.vscode/client-vscode1",
-        "--extensions-dir=${workspaceFolder}/.vscode/client-extensions1",
+        "--user-data-dir=${workspaceFolder}/.vscode/client-a",
         "--new-window",
         "${workspaceFolder}"
       ],
-      "outFiles": [
-        "${workspaceFolder}/extension/out/**/*.js"
-      ]
+      "outFiles": ["${workspaceFolder}/extension/out/**/*.js"]
     },
     {
       "name": "SyncScript Client 2",
@@ -31,19 +28,16 @@
       "runtimeExecutable": "${execPath}",
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}/extension",
-        "--user-data-dir=${workspaceFolder}/.vscode/client-vscode2",
-        "--extensions-dir=${workspaceFolder}/.vscode/client-extensions2",
+        "--user-data-dir=${workspaceFolder}/.vscode/client-b",
         "--new-window",
         "${workspaceFolder}"
       ],
-      "outFiles": [
-        "${workspaceFolder}/extension/out/**/*.js"
-      ]
+      "outFiles": ["${workspaceFolder}/extension/out/**/*.js"]
     }
   ],
   "compounds": [
     {
-      "name": "Debug SyncScript",
+      "name": "🚀 Full SyncScript Launch",
       "preLaunchTask": "build-extension",
       "configurations": [
         "Run Server",

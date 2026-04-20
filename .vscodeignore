@@ -1,0 +1,51 @@
+# Workspace-wide ignore guidance for the SyncScript repository.
+# Note: VS Code extension packaging still uses extension/.vscodeignore because
+# the extension manifest lives in /extension.
+
+# Git and editor state
+.git/**
+.github/**
+.vscode/**
+.idea/**
+*.code-workspace
+.DS_Store
+Thumbs.db
+
+# Dependency and cache folders
+node_modules/**
+**/node_modules/**
+.npm-cache/**
+coverage/**
+
+# Build and package outputs
+artifacts/**
+*.vsix
+signaling/dist/**
+extension/out/**
+**/*.tsbuildinfo
+
+# Local environment and logs
+.env
+.env.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Signaling runtime data
+signaling/syncscript.sqlite
+signaling/data/**
+
+# Source and tooling files that should not ship with the extension package
+signaling/**
+infra/**
+src/**
+extension/src/**
+extension/node_modules/**
+extension/.vscode/**
+extension/.vscode-test/**
+extension/package-lock.json
+extension/tsconfig.json
+extension/tailwind.config.js
+extension/webview/style.css
+extension/webview/treeHandler.js
+extension/**/*.map

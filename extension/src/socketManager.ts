@@ -88,6 +88,7 @@ export class SocketManager {
     );
   }
 
+
   private async applyRemoteChanges(data: any): Promise<void> {
     const uri = vscode.Uri.parse(data.fileUri);
 

@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SyncScript</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
         /* Essential styling for the validation popup */
         #workspace-error-popup {
@@ -100,7 +99,7 @@
                 <p class="text-[10px] text-gray-500 uppercase">Room ID (Share this)</p>
                 <div class="flex justify-between items-center mt-1">
                     <p id="active-room-id" class="text-blue-500 font-mono text-base break-all font-bold">---</p>
-                    <button onclick="copyId()" class="text-[10px] bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded border border-gray-600 transition">Copy</button>
+                    <button id="btn-copy-room-id" class="text-[10px] bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded border border-gray-600 transition">Copy</button>
                 </div>
             </div>
 
@@ -132,19 +131,5 @@
 
     <script src="treeView.js"></script>
     <script src="main.js"></script>
-    <script>
-        function copyId() {
-            const idElement = document.getElementById('active-room-id');
-            if (idElement) {
-                const id = idElement.innerText;
-                navigator.clipboard.writeText(id);
-                // Optional: Provide visual feedback for copy
-                const btn = event.target;
-                const originalText = btn.innerText;
-                btn.innerText = 'Copied!';
-                setTimeout(() => btn.innerText = originalText, 2000);
-            }
-        }
-    </script>
 </body>
 </html>

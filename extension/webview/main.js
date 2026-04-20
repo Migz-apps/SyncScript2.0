@@ -25,6 +25,7 @@
         const countdownTimer = document.getElementById('countdown-timer'); 
         const btnStopDeactivation = document.getElementById('btn-stop-deactivation'); 
         const btnDeactivate = document.getElementById('btn-deactivate'); 
+        const btnCopyRoomId = document.getElementById('btn-copy-room-id');
         const memberList = document.getElementById('member-list'); 
         
         // ELEMENT REFERENCES
@@ -146,6 +147,26 @@
             vscode.postMessage({ command: 'leaveRoom' }); 
             showView('selection'); 
         });
+
+        if (btnCopyRoomId) {
+            btnCopyRoomId.addEventListener('click', async () => {
+                const roomId = roomIdDisplay?.innerText?.trim();
+                if (!roomId || roomId === '---') {
+                    return;
+                }
+
+                try {
+                    await navigator.clipboard.writeText(roomId);
+                    const originalText = btnCopyRoomId.innerText;
+                    btnCopyRoomId.innerText = 'Copied!';
+                    setTimeout(() => {
+                        btnCopyRoomId.innerText = originalText;
+                    }, 2000);
+                } catch (error) {
+                    console.warn('Failed to copy room id', error);
+                }
+            });
+        }
 
         // Deactivation (Admin Only)
         btnDeactivate.addEventListener('click', () => {

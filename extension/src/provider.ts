@@ -142,13 +142,38 @@ export class SyncScriptProvider implements vscode.WebviewViewProvider {
         const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'webview', 'main.js'));
         const treeViewUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'webview', 'treeView.js'));
         const cssUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'webview', 'output.css'));
+        const nonce = this._getNonce();
 
         let htmlContent = fs.readFileSync(htmlUri.fsPath, 'utf8');
 
-        htmlContent = htmlContent.replace(/<script\s+src="treeView\.js"><\/script>/i, `<script src="${treeViewUri}"></script>`);
-        htmlContent = htmlContent.replace(/<script\s+src="main\.js"><\/script>/i, `<script src="${scriptUri}"></script>`);
+        const csp = [
+            "default-src 'none'",
+            `img-src ${webview.cspSource} https: data:`,
+            `style-src ${webview.cspSource} 'unsafe-inline'`,
+            `font-src ${webview.cspSource}`,
+            `script-src 'nonce-${nonce}'`
+        ].join('; ');
+
+        htmlContent = htmlContent.replace(
+            /<head>/i,
+            `<head>\n    <meta http-equiv="Content-Security-Policy" content="${csp}">`
+        );
+        htmlContent = htmlContent.replace(/<script[^>]*src="https:\/\/cdn\.jsdelivr\.net\/npm\/@tailwindcss\/browser@4"[^>]*><\/script>/i, '');
+        htmlContent = htmlContent.replace(/<script\s+src="treeView\.js"><\/script>/i, `<script nonce="${nonce}" src="${treeViewUri}"></script>`);
+        htmlContent = htmlContent.replace(/<script\s+src="main\.js"><\/script>/i, `<script nonce="${nonce}" src="${scriptUri}"></script>`);
         htmlContent = htmlContent.replace(/href="output\.css"/i, `href="${cssUri}"`);
 
         return htmlContent;
+    }
+
+    private _getNonce(): string {
+        const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let nonce = '';
+
+        for (let index = 0; index < 32; index++) {
+            nonce += possible.charAt(Math.floor(Math.random() * possible.length));
+        }
+
+        return nonce;
     }
 }

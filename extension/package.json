@@ -3,15 +3,26 @@
   "displayName": "SyncScript P2P",
   "description": "Real-time room-based code synchronization",
   "version": "0.0.1",
+  "publisher": "migz-apps",
+  "author": {
+    "name": "MAZIMPAKA Miguel"
+  },
+  "homepage": "https://github.com/Migz-apps/SyncScript2.0",
+  "bugs": {
+    "url": "https://github.com/Migz-apps/SyncScript2.0/issues"
+  },
+  "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",
     "url": "https://github.com/Migz-apps/SyncScript2.0.git"
   },
-  "files": [
-    "out/**/*",
-    "webview/**/*",
-    "package.json",
-    "tailwind.config.js"
+  "keywords": [
+    "collaboration",
+    "p2p",
+    "sync",
+    "websocket",
+    "pair-programming",
+    "workspace"
   ],
   "engines": {
     "vscode": "^1.85.0"
@@ -19,8 +30,18 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onView:syncscript.sidebar"
+  ],
   "main": "./out/extension.js",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false
+    },
+    "virtualWorkspaces": {
+      "supported": false
+    }
+  },
   "contributes": {
     "configuration": {
       "title": "SyncScript",
@@ -58,7 +79,7 @@
     "lint": "eslint src --ext .ts",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile",
-    "test": "node ./out/test/runTest.js",
+    "test": "npm run typecheck",
     "package:vsix": "vsce package --no-dependencies --out ../artifacts/syncscript.vsix",
     "tailwind:build": "tailwindcss -i ./webview/style.css -o ./webview/output.css",
     "tailwind:watch": "tailwindcss -i ./webview/style.css -o ./webview/output.css --watch"
