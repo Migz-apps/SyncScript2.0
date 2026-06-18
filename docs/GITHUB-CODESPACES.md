@@ -14,6 +14,55 @@ This guide runs **everything** in a free GitHub Codespace: Redis persistence, si
 
 ---
 
+## How long should a Codespace take?
+
+| Phase | Normal time | If you see this, something is wrong |
+|-------|-------------|-------------------------------------|
+| VM provision + image pull | **2–5 min** | 15+ min with no editor = cancel and retry |
+| `npm install` (postCreate) | **2–4 min** | 20+ min stuck on one package = network issue |
+| First `npm run start:signaling` | **1–2 min** | Build runs here, not during Codespace create |
+
+**30+ minutes total is not normal.** Common causes:
+
+1. **Old devcontainer** pulled Docker Compose + Redis + ran `npm install && npm run build` before you could use the editor
+2. **GitHub queue** on free tier at peak hours
+3. **Stuck postCreate** — check: Codespace → **View creation log**
+
+### If you are waiting right now
+
+1. Open **github.com/codespaces** → find your Codespace → **View creation log**
+2. If it has been **>20 min** on the same step, click **⋯ → Stop** then **Rebuild** (or delete and create new)
+3. When creating, pick a **4-core** machine if offered (sometimes faster on first boot)
+4. **Skip Codespaces entirely** for today — use the [fast local path](#fastest-alternative-skip-codespaces) below (works on weak PCs)
+
+### Speed tips (after you push the latest repo)
+
+The default `.devcontainer/devcontainer.json` is now the **fast profile**:
+
+- Single Node image (no Docker Compose pull)
+- Only `npm install` on create — **no build during create**
+- Redis optional via `devcontainer.redis.json` when you need persistence
+
+**Enable Codespace prebuilds** (fastest repeat visits): Repo **Settings → Codespaces → Set up prebuild** → saves a snapshot after `npm install` so future Codespaces open in **~30 seconds**.
+
+---
+
+## Fastest alternative (skip Codespaces)
+
+If Codespaces is too slow, run signaling on your PC with **minimal RAM** (~80 MB):
+
+```powershell
+cd c:\Users\user\Downloads\github\SyncScript
+npm install
+npm run start:signaling
+```
+
+**Intended result:** Server on `ws://localhost:4444` in 1–2 minutes after `npm install` (no Redis, no Docker).
+
+Then `npm run package:vsix`, install VSIX, test with two VS Code windows. See [TESTING-WITHOUT-DOCKER.md](TESTING-WITHOUT-DOCKER.md).
+
+---
+
 ## Phase 1 — Create the Codespace
 
 ### Step 1 — Push the repository to GitHub
@@ -29,46 +78,35 @@ git push -u origin main
 
 1. Go to your repo on GitHub
 2. Click **Code** → **Codespaces** → **Create codespace on main**
-3. Wait 2–5 minutes for the VM to build
+3. Wait **3–8 minutes** for the VM (first time)
 
 **Intended result:**
-- A VS Code web editor opens in your browser
-- Terminal shows `postCreateCommand` running `npm install && npm run build`
-- When finished, you see compiled `signaling/dist/` and `extension/out/` folders
+- VS Code web editor opens (you can use the terminal **before** postCreate finishes)
+- Terminal eventually completes `npm install` only
+- You do **not** need to wait for a full build — run `npm run start:signaling` when ready
 
 ### Step 3 — Verify the dev environment
 
-In the Codespace terminal:
+In the Codespace terminal (Redis is **optional** in the fast profile):
 
 ```bash
-redis-cli ping
+# Skip if using fast profile — Redis not required for testing
+redis-cli ping   # only if you use devcontainer.redis.json
 ```
 
-**Intended result:** `PONG` — Redis is running (started by `.devcontainer/docker-compose.yml`).
-
-```bash
-curl -s http://localhost:4444/health/live
-```
-
-**Intended result:** May fail with connection refused — signaling is not started yet (expected).
+**Intended result:** Editor is open and `npm install` completed. Proceed even without Redis.
 
 ---
 
 ## Phase 2 — Start Redis + Signaling Stack
 
-### Step 4 — Start the full stack
+### Step 4 — Start signaling
 
 ```bash
-npm run start:stack
+npm run start:signaling
 ```
 
-Or manually:
-
-```bash
-export REDIS_URL=redis://localhost:6379
-npm run build --workspace signaling
-npm run start:prod --workspace signaling
-```
+For Redis persistence (slower Codespace setup), use `devcontainer.redis.json` and `npm run start:stack`.
 
 **Intended result:**
 - Terminal logs `signaling_server_started` on port **4444**

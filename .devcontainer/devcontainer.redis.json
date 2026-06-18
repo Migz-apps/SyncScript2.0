@@ -1,0 +1,27 @@
+{
+  "name": "SyncScript Full (Redis + Docker Compose — slower first start)",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/SyncScript",
+  "forwardPorts": [4444, 6379],
+  "portsAttributes": {
+    "4444": {
+      "label": "SyncScript Signaling",
+      "onAutoForward": "notify",
+      "visibility": "public"
+    },
+    "6379": {
+      "label": "Redis",
+      "onAutoForward": "silent"
+    }
+  },
+  "postCreateCommand": "npm install",
+  "postAttachCommand": "bash .devcontainer/post-attach.sh",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "syncscript.signalingUrl": "ws://localhost:4444"
+      }
+    }
+  }
+}

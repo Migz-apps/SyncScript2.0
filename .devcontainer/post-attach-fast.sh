@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+echo ""
+echo "=============================================="
+echo " SyncScript Codespace ready (fast profile)"
+echo "=============================================="
+echo ""
+echo " First-time setup (run once after Codespace opens):"
+echo "   npm run start:signaling    # memory mode, no Redis — fine for testing"
+echo "   npm run package:vsix       # in a second terminal"
+echo ""
+echo " Need Redis? Copy devcontainer.redis.json -> devcontainer.json and rebuild."
+echo " See docs/GITHUB-CODESPACES.md#speed"
+echo ""
