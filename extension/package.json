@@ -1,46 +1,22 @@
 {
   "name": "syncscript",
-  "displayName": "SyncScript P2P",
-  "description": "Real-time room-based code synchronization",
-  "version": "0.0.1",
+  "displayName": "SyncScript",
+  "description": "Real-time collaborative coding — self-hosted Live Share alternative",
+  "version": "2.0.0",
   "publisher": "migz-apps",
-  "author": {
-    "name": "MAZIMPAKA Miguel"
-  },
+  "author": { "name": "MAZIMPAKA Miguel" },
   "homepage": "https://github.com/Migz-apps/SyncScript2.0",
-  "bugs": {
-    "url": "https://github.com/Migz-apps/SyncScript2.0/issues"
-  },
+  "bugs": { "url": "https://github.com/Migz-apps/SyncScript2.0/issues" },
   "license": "SEE LICENSE IN LICENSE",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Migz-apps/SyncScript2.0.git"
-  },
-  "keywords": [
-    "collaboration",
-    "p2p",
-    "sync",
-    "websocket",
-    "pair-programming",
-    "workspace"
-  ],
-  "engines": {
-    "vscode": "^1.85.0"
-  },
-  "categories": [
-    "Other"
-  ],
-  "activationEvents": [
-    "onView:syncscript.sidebar"
-  ],
+  "repository": { "type": "git", "url": "https://github.com/Migz-apps/SyncScript2.0.git" },
+  "keywords": ["collaboration", "pair-programming", "sync", "websocket", "live-share", "self-hosted"],
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Other"],
+  "activationEvents": ["onStartupFinished"],
   "main": "./out/extension.js",
   "capabilities": {
-    "untrustedWorkspaces": {
-      "supported": false
-    },
-    "virtualWorkspaces": {
-      "supported": false
-    }
+    "untrustedWorkspaces": { "supported": false },
+    "virtualWorkspaces": { "supported": false }
   },
   "contributes": {
     "configuration": {
@@ -50,26 +26,97 @@
           "type": "string",
           "default": "ws://localhost:4444",
           "description": "WebSocket URL for the SyncScript signaling server."
+        },
+        "syncscript.displayName": {
+          "type": "string",
+          "default": "",
+          "description": "Display name shown to collaborators. Defaults to git user.name."
+        },
+        "syncscript.syncPaths": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "If set, only sync these subdirectories (e.g. [\"src\", \"lib\"])."
+        },
+        "syncscript.encryptionKey": {
+          "type": "string",
+          "default": "",
+          "description": "End-to-end encryption passphrase for file content. Share with collaborators."
+        },
+        "syncscript.orgId": {
+          "type": "string",
+          "default": "",
+          "description": "Organization namespace for team rooms (e.g. acme)."
+        },
+        "syncscript.authToken": {
+          "type": "string",
+          "default": "",
+          "description": "API key or GitHub OAuth token for authenticated signaling servers."
+        },
+        "syncscript.autoFollowDebug": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically navigate to a collaborator's debug location."
+        },
+        "syncscript.mirrorBreakpoints": {
+          "type": "boolean",
+          "default": true,
+          "description": "Mirror breakpoints set by collaborators in your workspace."
+        },
+        "syncscript.iceServers": {
+          "type": "string",
+          "default": "",
+          "description": "JSON array of RTCIceServer objects for WebRTC (e.g. STUN/TURN). Empty uses Google STUN."
+        },
+        "syncscript.localSignalingPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to signaling/dist/server.js for peer-hosted sessions."
+        },
+        "syncscript.localSignalingPort": {
+          "type": "number",
+          "default": 4444,
+          "description": "Port for locally spawned signaling server."
+        },
+        "syncscript.localRedisUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Optional Redis URL when running local signaling (e.g. redis://localhost:6379)."
         }
       }
     },
+    "commands": [
+      { "command": "syncscript.showPanel", "title": "SyncScript: Show Panel" },
+      { "command": "syncscript.joinRoom", "title": "SyncScript: Join Room" },
+      { "command": "syncscript.createRoom", "title": "SyncScript: Create Room" },
+      { "command": "syncscript.leaveRoom", "title": "SyncScript: Leave Room" },
+      { "command": "syncscript.followUser", "title": "SyncScript: Follow User" },
+      { "command": "syncscript.stopFollowing", "title": "SyncScript: Stop Following" },
+      { "command": "syncscript.shareCurrentFile", "title": "SyncScript: Open Current File for Everyone" },
+      { "command": "syncscript.forwardPort", "title": "SyncScript: Forward Port" },
+      { "command": "syncscript.shareDiagnostics", "title": "SyncScript: Share Diagnostics" },
+      { "command": "syncscript.copyInviteLink", "title": "SyncScript: Copy Invite Link" },
+      { "command": "syncscript.startRecording", "title": "SyncScript: Start Recording" },
+      { "command": "syncscript.exportRecording", "title": "SyncScript: Export Recording" },
+      { "command": "syncscript.rotateRoomKey", "title": "SyncScript: Rotate Room Key" },
+      { "command": "syncscript.setPresenterMode", "title": "SyncScript: Set Presenter" },
+      { "command": "syncscript.runSharedTask", "title": "SyncScript: Run Shared Task" },
+      { "command": "syncscript.scheduleSession", "title": "SyncScript: Schedule Session" },
+      { "command": "syncscript.openBrowserViewer", "title": "SyncScript: Open Browser Viewer" },
+      { "command": "syncscript.sendChat", "title": "SyncScript: Send Chat Message" },
+      { "command": "syncscript.addAnnotation", "title": "SyncScript: Add Annotation" },
+      { "command": "syncscript.replayRecording", "title": "SyncScript: Replay Recording" },
+      { "command": "syncscript.signInGitHub", "title": "SyncScript: Sign In with GitHub" },
+      { "command": "syncscript.signOut", "title": "SyncScript: Sign Out" },
+      { "command": "syncscript.startLocalSignaling", "title": "SyncScript: Start Local Signaling (Peer Host)" },
+      { "command": "syncscript.stopLocalSignaling", "title": "SyncScript: Stop Local Signaling" },
+      { "command": "syncscript.openSharedTerminal", "title": "SyncScript: Open Shared Terminal" }
+    ],
     "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "syncscript-explorer",
-          "title": "SyncScript",
-          "icon": "$(broadcast)"
-        }
-      ]
+      "activitybar": [{ "id": "syncscript-explorer", "title": "SyncScript", "icon": "$(broadcast)" }]
     },
     "views": {
-      "syncscript-explorer": [
-        {
-          "type": "webview",
-          "id": "syncscript.sidebar",
-          "name": "Workspace Control"
-        }
-      ]
+      "syncscript-explorer": [{ "type": "webview", "id": "syncscript.sidebar", "name": "Workspace Control" }]
     }
   },
   "scripts": {
@@ -79,7 +126,7 @@
     "lint": "eslint src --ext .ts",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile",
-    "test": "npm run typecheck",
+    "test": "node --test out/test/*.test.js",
     "package:vsix": "vsce package --no-dependencies --out ../artifacts/syncscript.vsix",
     "tailwind:build": "tailwindcss -i ./webview/style.css -o ./webview/output.css",
     "tailwind:watch": "tailwindcss -i ./webview/style.css -o ./webview/output.css --watch"

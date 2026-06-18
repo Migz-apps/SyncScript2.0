@@ -29,6 +29,7 @@ export interface SignalingStateStore {
   removeUser(socketId: string): Promise<UserRecord | null>;
   getRoomUsers(roomId: string): Promise<UserRecord[]>;
   updateActivity(roomId: string): Promise<void>;
+  updateSecurityKey(roomId: string, securityKey: string): Promise<void>;
   deleteRoom(roomId: string): Promise<void>;
   startRoomDeactivation(roomId: string, deactivationEndsAt: number): Promise<void>;
   cancelRoomDeactivation(roomId: string): Promise<void>;
@@ -91,6 +92,16 @@ class MemoryStateStore implements SignalingStateStore {
       return;
     }
 
+    room.lastActivity = Date.now();
+    this.rooms.set(roomId, room);
+  }
+
+  public async updateSecurityKey(roomId: string, securityKey: string): Promise<void> {
+    const room = this.rooms.get(roomId);
+    if (!room) {
+      return;
+    }
+    room.securityKey = securityKey;
     room.lastActivity = Date.now();
     this.rooms.set(roomId, room);
   }
@@ -252,6 +263,13 @@ class RedisStateStore implements SignalingStateStore {
 
   public async updateActivity(roomId: string): Promise<void> {
     await this.redis.hset(this.roomKey(roomId), { lastActivity: `${Date.now()}` });
+  }
+
+  public async updateSecurityKey(roomId: string, securityKey: string): Promise<void> {
+    await this.redis.hset(this.roomKey(roomId), {
+      securityKey,
+      lastActivity: `${Date.now()}`
+    });
   }
 
   public async deleteRoom(roomId: string): Promise<void> {

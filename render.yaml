@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: syncscript-signaling
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build --workspace signaling
+    startCommand: npm run start:prod --workspace signaling
+    healthCheckPath: /health/live
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4444
+      - key: METRICS_ENABLED
+        value: "true"
+      - key: LOG_LEVEL
+        value: info

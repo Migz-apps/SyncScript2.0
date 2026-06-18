@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SyncScript Viewer</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Consolas', 'Monaco', monospace; background: #1e1e1e; color: #d4d4d4; height: 100vh; display: flex; flex-direction: column; }
+    header { background: #252526; padding: 0.75rem 1rem; border-bottom: 1px solid #3c3c3c; display: flex; gap: 1rem; align-items: center; }
+    header h1 { font-size: 1rem; color: #569cd6; }
+    #join-form { display: flex; gap: 0.5rem; flex: 1; }
+    input { background: #3c3c3c; border: 1px solid #555; color: #d4d4d4; padding: 0.4rem 0.6rem; border-radius: 4px; font-family: inherit; }
+    button { background: #0e639c; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; }
+    button:hover { background: #1177bb; }
+    #status { font-size: 0.75rem; color: #858585; }
+    main { display: flex; flex: 1; overflow: hidden; }
+    #sidebar { width: 220px; background: #252526; border-right: 1px solid #3c3c3c; overflow-y: auto; padding: 0.5rem; }
+    #editor { flex: 1; padding: 1rem; overflow: auto; }
+    #code { white-space: pre; font-size: 14px; line-height: 1.5; }
+    .file-item { padding: 0.25rem 0.5rem; cursor: pointer; border-radius: 3px; font-size: 0.8rem; }
+    .file-item:hover, .file-item.active { background: #37373d; color: #fff; }
+    .participant { display: flex; align-items: center; gap: 0.4rem; padding: 0.2rem 0; font-size: 0.75rem; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #4ec9b0; }
+    h3 { font-size: 0.65rem; text-transform: uppercase; color: #858585; margin: 0.75rem 0 0.4rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>SyncScript Viewer</h1>
+    <div id="join-form">
+      <input id="server" placeholder="ws://localhost:4444" value="" style="flex:2">
+      <input id="roomId" placeholder="Room ID" style="flex:1">
+      <input id="key" placeholder="Password" type="password" style="flex:1">
+      <input id="name" placeholder="Your name" value="Viewer" style="flex:1">
+      <button onclick="joinRoom()">Join (Read-Only)</button>
+    </div>
+    <span id="status">Disconnected</span>
+  </header>
+  <main>
+    <div id="sidebar">
+      <h3>Participants</h3>
+      <div id="participants"></div>
+      <h3>Files</h3>
+      <div id="files"></div>
+    </div>
+    <div id="editor"><pre id="code">Join a room to view live collaboration...</pre></div>
+  </main>
+  <script>
+    let socket = null;
+    let fileContents = {};
+    let activeFile = null;
+
+    function joinRoom() {
+      const server = document.getElementById('server').value || `ws://${location.hostname}:4444`;
+      const roomId = document.getElementById('roomId').value;
+      const key = document.getElementById('key').value;
+      const name = document.getElementById('name').value;
+      if (!roomId || !key) { alert('Room ID and password required'); return; }
+
+      if (socket) socket.close();
+      socket = new WebSocket(server);
+
+      socket.onopen = () => {
+        document.getElementById('status').textContent = 'Connected — joining...';
+        socket.send(JSON.stringify({ type: 'JOIN_ROOM', roomId, key, userName: name, role: 'viewer' }));
+      };
+
+      socket.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        if (msg.type === 'JOIN_RESULT' && msg.success) {
+          document.getElementById('status').textContent = `In room: ${roomId}`;
+          renderParticipants(msg.users || []);
+        }
+        if (msg.type === 'USER_JOINED' || msg.type === 'USER_LEFT') {
+          renderParticipants(msg.users || []);
+        }
+        if (msg.type === 'ARCH_SHARE') {
+          renderFiles(msg.manifest || []);
+        }
+        if (msg.type === 'FILE_CONTENT') {
+          fileContents[msg.relativePath] = msg.content;
+          if (activeFile === msg.relativePath) showFile(msg.relativePath);
+        }
+        if (msg.type === 'FILE_CHANGE' && msg.relativePath) {
+          requestFile(msg.relativePath);
+        }
+        if (msg.type === 'CURSOR_UPDATE') {
+          document.getElementById('status').textContent =
+            `${msg.username} editing ${msg.relativePath}:${msg.position?.line}`;
+        }
+      };
+
+      socket.onclose = () => {
+        document.getElementById('status').textContent = 'Disconnected';
+      };
+    }
+
+    function renderParticipants(users) {
+      document.getElementById('participants').innerHTML = users.map(u =>
+        `<div class="participant"><div class="dot"></div>${u.username} <small>(${u.role||'editor'})</small></div>`
+      ).join('');
+    }
+
+    function renderFiles(files) {
+      document.getElementById('files').innerHTML = files.map(f =>
+        `<div class="file-item" onclick="selectFile('${f}')">${f}</div>`
+      ).join('');
+    }
+
+    function selectFile(path) {
+      activeFile = path;
+      document.querySelectorAll('.file-item').forEach(el => el.classList.toggle('active', el.textContent === path));
+      requestFile(path);
+      showFile(path);
+    }
+
+    function requestFile(path) {
+      if (socket?.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'FILE_REQUEST', relativePath: path }));
+      }
+    }
+
+    function showFile(path) {
+      document.getElementById('code').textContent = fileContents[path] || 'Loading...';
+    }
+
+    document.getElementById('server').value = `ws://${location.hostname}:4444`;
+  </script>
+</body>
+</html>

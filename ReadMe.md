@@ -1,88 +1,140 @@
 # SyncScript
 
-SyncScript is a real-time collaborative VS Code extension backed by a lightweight WebSocket signaling server and a peer-to-peer collaboration model.
+Self-hosted real-time collaborative coding for VS Code — a full-featured open-source Live Share alternative.
 
-## What Changed
+## Feature Complete (v1.0.0)
 
-- The signaling server is now environment-driven instead of hardcoded to `ws://localhost:4444`.
-- Redis-backed room and user state allows room recovery across server restarts and supports multi-pod signaling fan-out.
-- Health, readiness, and Prometheus metrics endpoints are available at `/health/live`, `/health/ready`, and `/metrics`.
-- Docker Compose can spin up the signaling server, Redis, and mock clients for local smoke tests.
-- Kubernetes manifests now include Redis, a production deployment, health probes, ingress, and HPA.
-- GitHub Actions now lint, type-check, package the extension as a `.vsix`, and build/publish the signaling image.
+### Collaboration
+- Real-time text sync with workspace-relative paths (cross-machine)
+- Operational Transform (OT) conflict merging via diff-match-patch
+- File create, delete, rename synchronization
+- Lazy file hydration on first edit
+- Initial workspace bootstrap + manifest comparison
+- End-to-end encryption (`syncscript.encryptionKey`)
 
-## Local Development
+### Presence
+- Remote cursors, selections, and typing indicators
+- Follow user mode
+- Per-line edit attribution in gutter
+- Open file for all participants
+- Presenter mode role
 
-Install dependencies once from the repo root:
+### Security
+- `.syncignore` + automatic secret/binary blocking
+- Join approval waiting room
+- Role-based permissions: host, co-host, editor, viewer, presenter
+- Room key rotation
+- API key + GitHub OAuth auth on server
+- IP allowlisting (`ALLOWED_IPS`)
+- Rate limiting + 512KB message cap
+
+### Developer Workflow
+- Git branch mismatch warnings
+- Shared diagnostics relay
+- Shared task/test output relay
+- Port forwarding with HTTP tunnel proxy
+- Terminal output relay
+- Format-on-save coordination
+- Dev Container detection
+- Extension compatibility warnings
+- Multi-root workspace support
+- Selective sync paths
+
+### Session Management
+- Auto-rejoin after disconnect
+- Session history + invite deep links
+- Session recording + export
+- Scheduled sessions
+- Organization namespaces (`syncscript.orgId`)
+- Session summary on exit
+
+### Server & DevOps
+- Redis-backed multi-pod signaling
+- Admin dashboard (`/admin`)
+- Browser read-only viewer (`/viewer`)
+- Audit log (`/audit`) + webhook endpoint
+- Redis backup export (`/admin/backup`)
+- Prometheus metrics + Grafana dashboard
+- Docker Compose + Kubernetes + Helm + Terraform
+- CLI for headless room creation
+- GitHub Actions CI/CD
+
+## Quick Start (No Docker)
 
 ```bash
 npm install
-```
-
-Build everything:
-
-```bash
 npm run build
+npm run start:signaling    # Terminal 1 — signaling server
+npm run package:vsix       # Terminal 2 — build extension
+npm test
 ```
 
-Package the VS Code extension:
+Install `artifacts/syncscript.vsix` in VS Code.
+
+**Documentation:**
+- **[docs/TESTING-WITHOUT-DOCKER.md](docs/TESTING-WITHOUT-DOCKER.md)** — local, Render, CI (no Docker on your PC)
+- **[docs/GITHUB-CODESPACES.md](docs/GITHUB-CODESPACES.md)** — full Codespaces guide with Redis + intended results per step
+- **[docs/DECENTRALIZED-OPERATION.md](docs/DECENTRALIZED-OPERATION.md)** — run without managing a permanent server
 
 ```bash
-npm run package:vsix
+npm run start:stack   # Redis + signaling (when Redis is available)
 ```
 
-## Docker Compose
+## v2.0.0 Features
 
-Start the signaling stack:
+- **WebRTC P2P mesh** — multi-peer data channels; falls back to WebSocket
+- **Shared debugging** — auto-follow debug location, mirrored breakpoints
+- **Room chat** — in-sidebar chat panel
+- **Code annotations** — non-destructive review comments on lines
+- **Session recording playback** — replay file changes, chat, cursors, annotations
+- **Shared terminal** — relay output to **SyncScript Shared** terminal
+- **GitHub SSO** — `SyncScript: Sign In with GitHub`
+- **Peer-hosted signaling** — `SyncScript: Start Local Signaling (Peer Host)`
+
+## Quick Start (Docker — optional)
 
 ```bash
-docker compose up --build signaling redis
+docker compose up --build redis signaling
 ```
 
-Run the local smoke test with mock clients:
+## Browser Viewer
 
-```bash
-docker compose --profile test up --build
-```
+Open `http://localhost:4444/viewer` for read-only browser collaboration.
 
-Run Prometheus and Grafana alongside the signaling server:
+## Admin Dashboard
 
-```bash
-docker compose --profile observability up --build
-```
+Open `http://localhost:4444/admin` for live room stats, audit log, and Redis backup export.
 
-## VS Code Extension Configuration
-
-Set the signaling endpoint from VS Code settings:
+## Configuration
 
 ```json
-"syncscript.signalingUrl": "wss://syncscript.example.com"
+{
+  "syncscript.signalingUrl": "ws://localhost:4444",
+  "syncscript.displayName": "Your Name",
+  "syncscript.encryptionKey": "shared-secret",
+  "syncscript.orgId": "acme",
+  "syncscript.authToken": "your-api-key",
+  "syncscript.syncPaths": ["src"]
+}
 ```
 
-The default value remains `ws://localhost:4444` for local development.
+## Server Environment
 
-## Kubernetes
+| Variable | Description |
+|----------|-------------|
+| `REDIS_URL` | Redis connection |
+| `API_KEYS` | Comma-separated API keys |
+| `GITHUB_OAUTH_ENABLED` | Enable GitHub token auth |
+| `ALLOWED_IPS` | IP allowlist |
 
-Apply the manifests in order:
+## Tests
 
 ```bash
-kubectl apply -f infra/k8s/namespace.yml
-kubectl apply -f infra/k8s/redis.yml
-kubectl apply -f infra/k8s/signaling.yml
+npm test                    # 19 unit tests
+docker compose --profile test up --build   # Smoke test
+SIGNALING_URL=ws://localhost:4444 npm test --workspace signaling  # Live integration
 ```
 
-Update the image in [infra/k8s/signaling.yml](/c:/Users/user/Downloads/github/SyncScript/infra/k8s/signaling.yml:38) before deploying.
+## License
 
-## Observability
-
-- Logs are emitted as structured JSON through Winston so they can flow into ELK-compatible collectors.
-- Prometheus scrapes `/metrics`.
-- Grafana is pre-provisioned with a Prometheus datasource for local dashboards.
-
-## Repository Layout
-
-- [extension/package.json](/c:/Users/user/Downloads/github/SyncScript/extension/package.json:1): extension build, VSIX packaging, and settings
-- [signaling/src/server.ts](/c:/Users/user/Downloads/github/SyncScript/signaling/src/server.ts:1): signaling runtime, health, metrics, and distributed room events
-- [docker-compose.yml](/c:/Users/user/Downloads/github/SyncScript/docker-compose.yml:1): local orchestration with Redis, mock clients, and observability profiles
-- [infra/k8s/signaling.yml](/c:/Users/user/Downloads/github/SyncScript/infra/k8s/signaling.yml:1): production deployment, service, ingress, and HPA
-- [.github/workflows/ci-cd.yml](/c:/Users/user/Downloads/github/SyncScript/.github/workflows/ci-cd.yml:1): CI/CD pipeline
+See [LICENSE](LICENSE).

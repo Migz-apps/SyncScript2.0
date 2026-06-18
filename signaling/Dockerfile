@@ -7,6 +7,7 @@ RUN npm install
 
 COPY signaling/tsconfig.json ./tsconfig.json
 COPY signaling/src ./src
+COPY signaling/public ./public
 RUN npm run build && npm prune --omit=dev
 
 FROM node:20-alpine AS runtime
@@ -18,6 +19,7 @@ ENV PORT=4444
 
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/node_modules ./node_modules
+COPY signaling/public ./public
 COPY --from=build /app/dist ./dist
 
 EXPOSE 4444

@@ -15,7 +15,6 @@ const roomKey = process.env.ROOM_KEY ?? "syncscript";
 const username = process.env.USERNAME ?? (clientMode === "host" ? "Host" : "Guest");
 const roomFile = process.env.ROOM_FILE ?? "/shared/room.json";
 const exitAfterMs = Number(process.env.EXIT_AFTER_MS ?? "15000");
-const fileUri = process.env.MOCK_FILE_URI ?? "file:///workspace/mock.txt";
 
 function log(message: string, details?: unknown): void {
   const payload = details ? ` ${JSON.stringify(details)}` : "";
@@ -89,7 +88,7 @@ async function startClient(): Promise<void> {
       socket.send(
         JSON.stringify({
           type: "FILE_CHANGE",
-          fileUri,
+          relativePath: "mock.txt",
           changes: [
             {
               range: {
@@ -98,7 +97,8 @@ async function startClient(): Promise<void> {
               },
               text: "// compose smoke-test\n"
             }
-          ]
+          ],
+          version: 1
         })
       );
     }

@@ -1,0 +1,27 @@
+{
+  "name": "SyncScript (Node + Redis)",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/SyncScript",
+  "forwardPorts": [4444, 6379],
+  "portsAttributes": {
+    "4444": {
+      "label": "SyncScript Signaling",
+      "onAutoForward": "notify",
+      "visibility": "public"
+    },
+    "6379": {
+      "label": "Redis",
+      "onAutoForward": "silent"
+    }
+  },
+  "postCreateCommand": "npm install && npm run build",
+  "postAttachCommand": "bash .devcontainer/post-attach.sh",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "syncscript.signalingUrl": "ws://localhost:4444"
+      }
+    }
+  }
+}

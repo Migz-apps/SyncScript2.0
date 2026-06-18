@@ -1,0 +1,59 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "panels": [
+    {
+      "title": "SyncScript Overview",
+      "type": "row",
+      "panels": [
+        {
+          "title": "Active WebSocket Connections",
+          "type": "graph",
+          "targets": [
+            {
+              "expr": "syncscript_ws_active_connections",
+              "legendFormat": "connections"
+            }
+          ]
+        },
+        {
+          "title": "Active Rooms",
+          "type": "graph",
+          "targets": [
+            {
+              "expr": "syncscript_active_rooms",
+              "legendFormat": "rooms"
+            }
+          ]
+        },
+        {
+          "title": "Message Rate",
+          "type": "graph",
+          "targets": [
+            {
+              "expr": "rate(syncscript_messages_received_total[1m])",
+              "legendFormat": "{{type}}"
+            }
+          ]
+        },
+        {
+          "title": "Relay Latency (p95)",
+          "type": "graph",
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, rate(syncscript_room_relay_latency_ms_bucket[5m]))",
+              "legendFormat": "{{type}}"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["syncscript"],
+  "title": "SyncScript",
+  "uid": "syncscript-main",
+  "version": 1
+}

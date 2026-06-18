@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SyncScript Admin</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; padding: 2rem; }
+    h1 { color: #38bdf8; margin-bottom: 1.5rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .card { background: #1e293b; border-radius: 8px; padding: 1.25rem; border: 1px solid #334155; }
+    .card h3 { font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 0.5rem; }
+    .card .value { font-size: 2rem; font-weight: bold; color: #38bdf8; }
+    table { width: 100%; border-collapse: collapse; background: #1e293b; border-radius: 8px; overflow: hidden; }
+    th, td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid #334155; font-size: 0.875rem; }
+    th { background: #0f172a; color: #94a3b8; text-transform: uppercase; font-size: 0.7rem; }
+    tr:hover td { background: #334155; }
+    .badge { padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; }
+    .badge-green { background: #14532d; color: #86efac; }
+    .badge-red { background: #7f1d1d; color: #fca5a5; }
+    button { background: #2563eb; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; margin-right: 0.5rem; }
+    button:hover { background: #1d4ed8; }
+    #status { margin-bottom: 1rem; color: #94a3b8; font-size: 0.875rem; }
+  </style>
+</head>
+<body>
+  <h1>SyncScript Admin Dashboard</h1>
+  <div id="status">Loading...</div>
+  <div class="grid">
+    <div class="card"><h3>Server Version</h3><div class="value" id="version">—</div></div>
+    <div class="card"><h3>Mode</h3><div class="value" id="mode">—</div></div>
+    <div class="card"><h3>Audit Events</h3><div class="value" id="audit-count">—</div></div>
+    <div class="card"><h3>Active Rooms</h3><div class="value" id="room-count">—</div></div>
+  </div>
+  <div style="margin-bottom:1rem">
+    <button onclick="refresh()">Refresh</button>
+    <button onclick="exportBackup()">Export Redis Backup</button>
+  </div>
+  <h2 style="margin-bottom:1rem;font-size:1rem;color:#94a3b8">Recent Audit Log</h2>
+  <table>
+    <thead><tr><th>Time</th><th>Action</th><th>Room</th><th>User</th></tr></thead>
+    <tbody id="audit-table"></tbody>
+  </table>
+  <script>
+    async function refresh() {
+      const [info, audit, rooms] = await Promise.all([
+        fetch('/').then(r => r.json()),
+        fetch('/audit').then(r => r.json()),
+        fetch('/admin/rooms').then(r => r.json()).catch(() => ({ rooms: [] }))
+      ]);
+      document.getElementById('version').textContent = info.version || '—';
+      document.getElementById('mode').textContent = info.mode || '—';
+      document.getElementById('audit-count').textContent = audit.entries?.length ?? 0;
+      document.getElementById('room-count').textContent = rooms.rooms?.length ?? 0;
+      document.getElementById('status').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
+      const tbody = document.getElementById('audit-table');
+      tbody.innerHTML = (audit.entries || []).slice().reverse().slice(0, 50).map(e => `
+        <tr>
+          <td>${new Date(e.timestamp).toLocaleTimeString()}</td>
+          <td><span class="badge badge-green">${e.action}</span></td>
+          <td>${e.roomId || '—'}</td>
+          <td>${e.username || e.socketId || '—'}</td>
+        </tr>
+      `).join('');
+    }
+    async function exportBackup() {
+      const data = await fetch('/admin/backup').then(r => r.json());
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'syncscript-backup.json';
+      a.click();
+    }
+    refresh();
+    setInterval(refresh, 10000);
+  </script>
+</body>
+</html>

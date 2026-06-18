@@ -9,50 +9,102 @@ export class IgnoreManager {
         '**/dist/**',
         '**/out/**',
         '**/build/**',
-        '**/.DS_Store'
+        '**/.DS_Store',
+        '**/.env',
+        '**/.env.*',
+        '**/*.pem',
+        '**/*.key',
+        '**/credentials.json',
+        '**/secrets.yaml',
+        '**/secrets.yml',
+        '**/.npmrc',
+        '**/id_rsa',
+        '**/id_rsa.pub'
+    ];
+
+    private static readonly SECRET_PATTERNS = [
+        /^\.env(\..+)?$/,
+        /^\.env\.local$/,
+        /credentials\.json$/,
+        /secrets\.(ya?ml|json)$/,
+        /\.pem$/,
+        /\.key$/,
+        /^id_rsa$/,
+        /^\.npmrc$/
     ];
 
     private static readonly BINARY_EXTENSIONS = new Set([
-        '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.ico', '.pdf', 
+        '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.ico', '.pdf',
         '.zip', '.tar', '.gz', '.7z', '.exe', '.dll', '.so', '.dylib',
-        '.mp3', '.mp4', '.wav', '.mov', '.pyc', '.class'
+        '.mp3', '.mp4', '.wav', '.mov', '.pyc', '.class', '.wasm',
+        '.woff', '.woff2', '.ttf', '.eot', '.bin', '.dat'
     ]);
 
-    /**
-     * Returns a glob pattern string for findFiles by merging default 
-     * ignores with user-defined patterns from .syncignore.
-     */
+    private static readonly MAX_SYNC_FILE_BYTES = 10 * 1024 * 1024; // 10MB
+
     public static async getIgnorePattern(): Promise<string> {
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders) {
             return `{${this.DEFAULT_IGNORES.join(',')}}`;
         }
 
-        const ignoreFilePath = path.join(workspaceFolders[0].uri.fsPath, '.syncignore');
         let patterns = [...this.DEFAULT_IGNORES];
 
-        if (fs.existsSync(ignoreFilePath)) {
-            try {
-                const content = fs.readFileSync(ignoreFilePath, 'utf8');
-                const userPatterns = content
-                    .split(/\r?\n/)
-                    .map(line => line.trim())
-                    .filter(line => line && !line.startsWith('#'));
-                
-                patterns = [...new Set([...patterns, ...userPatterns])];
-            } catch (err) {
-                console.error("Failed to read .syncignore:", err);
+        for (const folder of workspaceFolders) {
+            const ignoreFilePath = path.join(folder.uri.fsPath, '.syncignore');
+            if (fs.existsSync(ignoreFilePath)) {
+                try {
+                    const content = fs.readFileSync(ignoreFilePath, 'utf8');
+                    const userPatterns = content
+                        .split(/\r?\n/)
+                        .map((line) => line.trim())
+                        .filter((line) => line && !line.startsWith('#'));
+                    patterns = [...patterns, ...userPatterns];
+                } catch (err) {
+                    console.error('Failed to read .syncignore:', err);
+                }
             }
         }
 
-        return `{${patterns.join(',')}}`;
+        const syncPaths = vscode.workspace
+            .getConfiguration('syncscript')
+            .get<string[]>('syncPaths', []);
+        if (syncPaths.length > 0) {
+            const includeOnly = syncPaths.map((p) => `**/${p.replace(/^\//, '')}/**`);
+            patterns = [...patterns, ...includeOnly];
+        }
+
+        return `{${[...new Set(patterns)].join(',')}}`;
     }
 
-    /**
-     * Checks if a specific file is binary based on its extension.
-     */
+    public static getSyncIncludePaths(): string[] {
+        return vscode.workspace.getConfiguration('syncscript').get<string[]>('syncPaths', []);
+    }
+
     public static isBinaryFile(filePath: string): boolean {
         const ext = path.extname(filePath).toLowerCase();
         return this.BINARY_EXTENSIONS.has(ext);
+    }
+
+    public static isSecretFile(filePath: string): boolean {
+        const baseName = path.basename(filePath);
+        return this.SECRET_PATTERNS.some((pattern) => pattern.test(baseName));
+    }
+
+    public static shouldSyncFile(filePath: string, fileSize?: number): boolean {
+        if (this.isBinaryFile(filePath)) {
+            return false;
+        }
+        if (this.isSecretFile(filePath)) {
+            return false;
+        }
+        if (fileSize !== undefined && fileSize > this.MAX_SYNC_FILE_BYTES) {
+            return false;
+        }
+        return true;
+    }
+
+    public static getMaxFileSize(): number {
+        return this.MAX_SYNC_FILE_BYTES;
     }
 }

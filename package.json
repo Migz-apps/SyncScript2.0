@@ -1,6 +1,6 @@
 {
   "name": "syncscript-workspace",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "description": "Workspace automation for the SyncScript extension and signaling server",
   "workspaces": [
@@ -11,7 +11,11 @@
     "lint": "eslint extension/src/**/*.ts signaling/src/**/*.ts",
     "typecheck": "npm run typecheck --workspace extension && npm run typecheck --workspace signaling",
     "build": "npm run build --workspace signaling && npm run compile --workspace extension && npm run tailwind:build --workspace extension",
-    "package:vsix": "npm run package:vsix --workspace extension"
+    "test": "npm run test --workspace signaling && npm run test --workspace extension",
+    "package:vsix": "npm run package:vsix --workspace extension",
+    "start:signaling": "npm run build --workspace signaling && npm run start:prod --workspace signaling",
+    "start:signaling:dev": "npm run dev --workspace signaling",
+    "start:stack": "node -e \"require('child_process').spawn(process.platform==='win32'?'powershell':'bash',['-File',process.platform==='win32'?'scripts/start-stack.ps1':'scripts/start-stack.sh'],{stdio:'inherit',shell:true})\""
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",

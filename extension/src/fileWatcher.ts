@@ -1,26 +1,60 @@
 import * as vscode from 'vscode';
+import { SocketManager } from './socketManager';
+import { PathUtils } from './utils/pathUtils';
+import { IgnoreManager } from './utils/ignoreManager';
 
 export class FileWatcher {
-    constructor(private onFolderCreated: (path: string) => void) {
+    private disposables: vscode.Disposable[] = [];
+
+    constructor(
+        private readonly socket: SocketManager,
+        private readonly canSend: () => boolean
+    ) {
         this.init();
     }
 
-    private init() {
-        // WATCHER: Detects when a user creates a new folder
-        const watcher = vscode.workspace.createFileSystemWatcher('**/');
-        
+    private init(): void {
+        const watcher = vscode.workspace.createFileSystemWatcher('**/*');
+
         watcher.onDidCreate((uri) => {
-            // Check if the created item is a directory
-            vscode.workspace.fs.stat(uri).then(stat => {
-                if (stat.type === vscode.FileType.Directory) {
-                    this.onFolderCreated(uri.fsPath);
+            if (!this.canSend() || uri.scheme !== 'file') {
+                return;
+            }
+            const rel = PathUtils.toRelativePath(uri);
+            if (!rel || !IgnoreManager.shouldSyncFile(uri.fsPath)) {
+                return;
+            }
+            void (async () => {
+                try {
+                    const bytes = await vscode.workspace.fs.readFile(uri);
+                    if (bytes.byteLength > IgnoreManager.getMaxFileSize()) {
+                        return;
+                    }
+                    this.socket.send({
+                        type: 'FILE_CREATE',
+                        relativePath: rel,
+                        content: Buffer.from(bytes).toString('utf8')
+                    });
+                } catch {
+                    this.socket.send({ type: 'FILE_CREATE', relativePath: rel, content: '' });
                 }
-            });
+            })();
         });
+
+        watcher.onDidDelete((uri) => {
+            if (!this.canSend() || uri.scheme !== 'file') {
+                return;
+            }
+            const rel = PathUtils.toRelativePath(uri);
+            if (rel) {
+                this.socket.send({ type: 'FILE_DELETE', relativePath: rel });
+            }
+        });
+
+        this.disposables.push(watcher);
     }
 
-    public static async getFolderStructure() {
-        // This will be used to send the structure to new joiners
-        return await vscode.workspace.findFiles('**/*', '**/node_modules/**');
+    public dispose(): void {
+        this.disposables.forEach((d) => d.dispose());
     }
 }
