@@ -3,7 +3,7 @@ services:
     name: syncscript-signaling
     runtime: node
     plan: free
-    buildCommand: npm install && npm run build --workspace signaling
+    buildCommand: npm install --include=dev && npm run build --workspace signaling
     startCommand: npm run start:prod --workspace signaling
     healthCheckPath: /health/live
     envVars:
