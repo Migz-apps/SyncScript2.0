@@ -2,7 +2,7 @@
   "name": "syncscript",
   "displayName": "SyncScript",
   "description": "Real-time collaborative coding — self-hosted Live Share alternative",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "publisher": "migz-apps",
   "author": { "name": "MAZIMPAKA Miguel" },
   "homepage": "https://github.com/Migz-apps/SyncScript2.0",
@@ -24,8 +24,8 @@
       "properties": {
         "syncscript.signalingUrl": {
           "type": "string",
-          "default": "ws://localhost:4444",
-          "description": "WebSocket URL for the SyncScript signaling server."
+          "default": "wss://syncscript-signaling.onrender.com",
+          "description": "WebSocket URL for the SyncScript signaling server (wss:// for cloud, ws:// for local)."
         },
         "syncscript.displayName": {
           "type": "string",
@@ -120,7 +120,7 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "node -e \"if(!require('fs').existsSync('out/extension.js')){console.error('Run npm run build from repo root first');process.exit(1)}\"",
+    "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "typecheck": "tsc --noEmit -p ./",
     "lint": "eslint src --ext .ts",

@@ -49,7 +49,7 @@ export class TerminalSyncService {
                     })
                 );
             }
-        } catch (error) {
+        } catch {
             console.warn('SyncScript: terminal data capture unavailable (proposed API not enabled).');
         }
 
@@ -64,7 +64,7 @@ export class TerminalSyncService {
                     })
                 );
             }
-        } catch (error) {
+        } catch {
             console.warn('SyncScript: shell execution capture unavailable.');
         }
     }

@@ -19,6 +19,7 @@ import { WebRTCService } from './services/webrtcService';
 import { ChatService } from './services/chatService';
 import { DebugSyncService } from './services/debugSyncService';
 import { AnnotationService } from './services/annotationService';
+import { DEFAULT_SIGNALING_URL } from './constants';
 import { UserRole, Participant, CursorState } from './types/messages';
 
 export interface SocketManagerDeps {
@@ -696,7 +697,7 @@ export class SocketManager {
     private getSignalingUrlPrivate(): string {
         return (
             vscode.workspace.getConfiguration('syncscript').get<string>('signalingUrl') ??
-            'ws://localhost:4444'
+            DEFAULT_SIGNALING_URL
         );
     }
 }

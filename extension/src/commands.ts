@@ -10,6 +10,7 @@ import { ChatService } from './services/chatService';
 import { AnnotationService } from './services/annotationService';
 import { GitHubAuthService } from './services/githubAuth';
 import { LocalSignalingService } from './services/localSignaling';
+import { signalingUrlToHttp } from './constants';
 
 export function registerCommands(
     context: vscode.ExtensionContext,
@@ -150,7 +151,7 @@ export function registerCommands(
             vscode.window.showInformationMessage('Session scheduled.');
         }],
         ['syncscript.openBrowserViewer', () => {
-            const url = socket.getSignalingUrl().replace(/^ws/, 'http').replace(/\/$/, '') + '/viewer';
+            const url = `${signalingUrlToHttp(socket.getSignalingUrl())}/viewer`;
             void vscode.env.openExternal(vscode.Uri.parse(url));
         }],
         ['syncscript.sendChat', async () => {

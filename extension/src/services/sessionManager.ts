@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { UserRole } from '../types/messages';
+import { DEFAULT_SIGNALING_URL } from '../constants';
 
 export interface SessionRecord {
     roomId: string;
@@ -87,7 +88,7 @@ export class SessionManager {
     public getInviteLink(roomId: string, key: string): string {
         const serverUrl = vscode.workspace
             .getConfiguration('syncscript')
-            .get<string>('signalingUrl', 'ws://localhost:4444');
+            .get<string>('signalingUrl', DEFAULT_SIGNALING_URL);
         const host = serverUrl.replace(/^wss?:\/\//, '').replace(/\/$/, '');
         return `syncscript://join?room=${roomId}&key=${encodeURIComponent(key)}&server=${encodeURIComponent(host)}`;
     }
