@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { WebSocket } from 'ws';
+import type WebSocket from 'ws';
+import { WsWebSocket } from './runtimeDeps';
 import { FileSyncService } from './services/fileSyncService';
 import { ConflictManager } from './services/conflictManager';
 import { PermissionManager } from './services/permissionManager';
@@ -58,7 +59,7 @@ export class SocketManager {
     }
 
     public connect(): void {
-        if (this.socket?.readyState === WebSocket.OPEN || this.socket?.readyState === WebSocket.CONNECTING) {
+        if (this.socket?.readyState === 1 || this.socket?.readyState === 0) {
             return;
         }
 
@@ -69,16 +70,17 @@ export class SocketManager {
 
         this.manualDisconnect = false;
         const signalingUrl = this.getSignalingUrlPrivate();
-        this.socket = new WebSocket(signalingUrl);
+        const socket = new WsWebSocket(signalingUrl);
+        this.socket = socket;
 
-        this.socket.on('open', async () => {
+        socket.on('open', async () => {
             this.notifyHandlers({ type: 'CONNECTED' });
             this.notifyStatusChange();
             await this.attemptRejoin();
             this.checkServerVersion();
         });
 
-        this.socket.on('message', async (data) => {
+        socket.on('message', async (data) => {
             try {
                 const message = JSON.parse(data.toString()) as Record<string, unknown>;
                 await this.handleIncoming(message);
@@ -88,12 +90,12 @@ export class SocketManager {
             }
         });
 
-        this.socket.on('error', (error: Error) => {
+        socket.on('error', (error: Error) => {
             console.error('[SocketManager] Connection error', error.message);
             this.notifyStatusChange();
         });
 
-        this.socket.on('close', () => {
+        socket.on('close', () => {
             this.notifyHandlers({ type: 'DISCONNECTED' });
             this.notifyStatusChange();
 
@@ -580,7 +582,7 @@ export class SocketManager {
     }
 
     public isConnected(): boolean {
-        return this.socket?.readyState === WebSocket.OPEN;
+        return this.socket?.readyState === 1;
     }
 
     public isInRoom(): boolean {

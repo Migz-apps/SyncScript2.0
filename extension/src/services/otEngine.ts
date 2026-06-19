@@ -1,4 +1,4 @@
-import { diff_match_patch } from 'diff-match-patch';
+import { diff_match_patch } from '../runtimeDeps';
 
 export interface TextChange {
     range: {

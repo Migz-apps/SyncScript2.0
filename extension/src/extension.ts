@@ -27,6 +27,19 @@ import { LocalSignalingService } from './services/localSignaling';
 import { OTEngine } from './services/otEngine';
 
 export async function activate(context: vscode.ExtensionContext) {
+    try {
+        await activateSyncScript(context);
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error('SyncScript activation failed:', error);
+        void vscode.window.showErrorMessage(
+            `SyncScript failed to start: ${message}. Try reinstalling the VSIX after npm run package:vsix.`
+        );
+        throw error;
+    }
+}
+
+async function activateSyncScript(context: vscode.ExtensionContext) {
     const fileSync = new FileSyncService();
     const conflict = new ConflictManager();
     const permissions = new PermissionManager();
@@ -96,20 +109,6 @@ export async function activate(context: vscode.ExtensionContext) {
         () => socketManager.isInRoom() && permissions.canEdit() && !fileSync.isApplying()
     );
 
-    terminal.onTerminalOutput((name, data) => {
-        if (socketManager.isInRoom()) {
-            socketManager.send({ type: 'TERMINAL_OUTPUT', terminalName: name, data });
-        }
-    });
-    terminal.start();
-
-    debugSync.onDebugEvent((payload) => {
-        if (socketManager.isInRoom()) {
-            socketManager.send(payload);
-        }
-    });
-    debugSync.start(session.getDisplayName());
-
     context.subscriptions.push(
         vscode.window.registerWebviewViewProvider(SyncScriptProvider.viewType, provider),
         statusBar,
@@ -123,6 +122,28 @@ export async function activate(context: vscode.ExtensionContext) {
         { dispose: () => formatCoordinator.disable() },
         { dispose: () => webrtc.close() }
     );
+
+    terminal.onTerminalOutput((name, data) => {
+        if (socketManager.isInRoom()) {
+            socketManager.send({ type: 'TERMINAL_OUTPUT', terminalName: name, data });
+        }
+    });
+    try {
+        terminal.start();
+    } catch (error) {
+        console.warn('SyncScript: terminal sync disabled', error);
+    }
+
+    debugSync.onDebugEvent((payload) => {
+        if (socketManager.isInRoom()) {
+            socketManager.send(payload);
+        }
+    });
+    try {
+        debugSync.start(session.getDisplayName());
+    } catch (error) {
+        console.warn('SyncScript: debug sync disabled', error);
+    }
 
     registerCommands(context, socketManager, provider, session, recorder, terminal, permissions, chat, annotation, localSignaling);
 

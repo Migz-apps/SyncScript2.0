@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 
 /**
  * Captures terminal output and relays it to collaborators.
- * Uses onDidWriteTerminalData when available and shell-integration streams as fallback.
+ * Uses shell-integration streams when available; skips proposed APIs that crash in packaged extensions.
  */
 export class TerminalSyncService {
     private disposables: vscode.Disposable[] = [];
@@ -29,40 +29,43 @@ export class TerminalSyncService {
             this.attachTerminal(terminal);
         }
 
+        this.trySubscribeProposedTerminalApis();
+    }
+
+    private trySubscribeProposedTerminalApis(): void {
         const win = vscode.window as unknown as {
             onDidWriteTerminalData?: (listener: (e: { terminal: vscode.Terminal; data: string }) => void) => vscode.Disposable;
-            onDidChangeTerminalShellIntegration?: (listener: (e: { terminal: vscode.Terminal; shellIntegration: vscode.TerminalShellIntegration }) => void) => vscode.Disposable;
             onDidStartTerminalShellExecution?: (listener: (e: { terminal: vscode.Terminal; execution: { read: () => AsyncIterable<string> } }) => void) => vscode.Disposable;
         };
 
-        if (typeof win.onDidWriteTerminalData === 'function') {
-            this.disposables.push(
-                win.onDidWriteTerminalData((e) => {
-                    if (e.terminal.name === this.sharedName) {
-                        return;
-                    }
-                    this.onOutput?.(e.terminal.name, e.data);
-                })
-            );
+        try {
+            if (typeof win.onDidWriteTerminalData === 'function') {
+                this.disposables.push(
+                    win.onDidWriteTerminalData((e) => {
+                        if (e.terminal.name === this.sharedName) {
+                            return;
+                        }
+                        this.onOutput?.(e.terminal.name, e.data);
+                    })
+                );
+            }
+        } catch (error) {
+            console.warn('SyncScript: terminal data capture unavailable (proposed API not enabled).');
         }
 
-        if (typeof win.onDidStartTerminalShellExecution === 'function') {
-            this.disposables.push(
-                win.onDidStartTerminalShellExecution((e) => {
-                    if (e.terminal.name === this.sharedName) {
-                        return;
-                    }
-                    void this.streamExecutionOutput(e.terminal.name, e.execution);
-                })
-            );
-        }
-
-        if (typeof win.onDidChangeTerminalShellIntegration === 'function') {
-            this.disposables.push(
-                win.onDidChangeTerminalShellIntegration(() => {
-                    // Shell integration enabled — output captured via onDidStartTerminalShellExecution
-                })
-            );
+        try {
+            if (typeof win.onDidStartTerminalShellExecution === 'function') {
+                this.disposables.push(
+                    win.onDidStartTerminalShellExecution((e) => {
+                        if (e.terminal.name === this.sharedName) {
+                            return;
+                        }
+                        void this.streamExecutionOutput(e.terminal.name, e.execution);
+                    })
+                );
+            }
+        } catch (error) {
+            console.warn('SyncScript: shell execution capture unavailable.');
         }
     }
 

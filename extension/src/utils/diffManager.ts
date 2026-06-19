@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { diff_match_patch } from 'diff-match-patch';
+import { diff_match_patch } from '../runtimeDeps';
 
 export class DiffManager {
     private static dmp = new diff_match_patch();

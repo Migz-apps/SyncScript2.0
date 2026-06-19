@@ -39,7 +39,15 @@ export class SyncScriptProvider implements vscode.WebviewViewProvider {
             localResourceRoots: [vscode.Uri.joinPath(this._extensionUri, 'webview')]
         };
 
-        webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
+        try {
+            webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            webviewView.webview.html = `<!DOCTYPE html><html><body style="font-family:sans-serif;padding:16px;color:#fff;background:#1e1e1e">
+                <h3>SyncScript failed to load UI</h3><p>${message}</p>
+                <p>Reinstall the VSIX: npm run package:vsix</p></body></html>`;
+            return;
+        }
 
         webviewView.webview.onDidReceiveMessage(async (data: { command: string; [key: string]: unknown }) => {
             const hasWorkspace = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0;
@@ -215,7 +223,15 @@ export class SyncScriptProvider implements vscode.WebviewViewProvider {
         const cssUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'webview', 'output.css'));
         const nonce = this._getNonce();
 
-        let htmlContent = fs.readFileSync(htmlUri.fsPath, 'utf8');
+        let htmlContent: string;
+        try {
+            htmlContent = fs.readFileSync(htmlUri.fsPath, 'utf8');
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            return `<!DOCTYPE html><html><body style="font-family:sans-serif;padding:16px;color:#ccc;background:#1e1e1e">
+                <h3>SyncScript UI failed to load</h3><p>${message}</p>
+                <p>Reinstall the VSIX: npm run package:vsix</p></body></html>`;
+        }
 
         const csp = [
             "default-src 'none'",
