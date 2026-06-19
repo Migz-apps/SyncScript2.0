@@ -3,12 +3,14 @@ services:
     name: syncscript-signaling
     runtime: node
     plan: free
-    buildCommand: npm install --include=dev && npm run build --workspace signaling
+    buildCommand: NPM_CONFIG_PRODUCTION=false npm install && npm run build --workspace signaling
     startCommand: npm run start:prod --workspace signaling
     healthCheckPath: /health/live
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NPM_CONFIG_PRODUCTION
+        value: "false"
       - key: PORT
         value: 4444
       - key: METRICS_ENABLED

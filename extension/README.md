@@ -1,16 +1,26 @@
 # SyncScript Extension
 
-Real-time collaborative coding for Visual Studio Code and Cursor — a self-hosted Live Share alternative.
+Real-time collaborative coding for **Cursor** (primary) and VS Code — a self-hosted Live Share alternative.
+
+## Install (Cursor)
+
+1. Open **Extensions** (`Ctrl+Shift+X`)
+2. Search **SyncScript**
+3. Click **Install**
+
+Or install from Open VSX: **[https://open-vsx.org/extension/migz-apps/syncscript](https://open-vsx.org/extension/migz-apps/syncscript)**
+
+> Cursor uses the **Open VSX** registry for extensions. SyncScript is published there as **migz-apps.syncscript**.
 
 ## Requirements
 
-- VS Code **1.85.0+** (or Cursor with VS Code extension support)
+- **Cursor** or VS Code **1.85.0+**
 - **Open a workspace folder** before creating or joining a room
 - Internet access (peers connect through a signaling server; file sync is peer-to-peer when possible)
 
 ## Quick start
 
-1. Install the extension from the Marketplace.
+1. Install the extension (see above).
 2. Open the **SyncScript** sidebar (broadcast icon in the activity bar).
 3. **Create Room** or **Join Room** with a room ID and password.
 4. Share the invite link or credentials with your collaborator.
@@ -59,4 +69,4 @@ npm test
 npm run package:vsix
 ```
 
-Press **F5** in VS Code to launch the Extension Development Host.
+Press **F5** in VS Code/Cursor to launch the Extension Development Host.

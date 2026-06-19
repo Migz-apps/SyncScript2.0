@@ -1,8 +1,18 @@
 # SyncScript
 
-Self-hosted real-time collaborative coding for VS Code — a full-featured open-source Live Share alternative.
+Self-hosted real-time collaborative coding for **Cursor** and VS Code — a Live Share alternative.
 
-## Feature Complete (v1.0.0)
+## Install the extension (Cursor)
+
+Search **SyncScript** in Cursor Extensions, or install from Open VSX:
+
+**[https://open-vsx.org/extension/migz-apps/syncscript](https://open-vsx.org/extension/migz-apps/syncscript)**
+
+Hosted signaling server (default for the extension):
+
+**[https://syncscript-signaling.onrender.com](https://syncscript-signaling.onrender.com)** · WebSocket: `wss://syncscript-signaling.onrender.com`
+
+## Feature Complete (v2.0.0)
 
 ### Collaboration
 - Real-time text sync with workspace-relative paths (cross-machine)
@@ -69,7 +79,7 @@ npm run package:vsix       # Terminal 2 — build extension
 npm test
 ```
 
-Install `artifacts/syncscript.vsix` in VS Code.
+Install in **Cursor**: Extensions → search **SyncScript**, or **Install from VSIX** (`artifacts/syncscript.vsix`).
 
 **Documentation:**
 - **[docs/TESTING-WITHOUT-DOCKER.md](docs/TESTING-WITHOUT-DOCKER.md)** — local, Render, CI (no Docker on your PC)
@@ -99,17 +109,17 @@ docker compose up --build redis signaling
 
 ## Browser Viewer
 
-Open `http://localhost:4444/viewer` for read-only browser collaboration.
+Open `https://syncscript-signaling.onrender.com/viewer` (cloud) or `http://localhost:4444/viewer` (local).
 
 ## Admin Dashboard
 
-Open `http://localhost:4444/admin` for live room stats, audit log, and Redis backup export.
+Open `https://syncscript-signaling.onrender.com/admin` (cloud) or `http://localhost:4444/admin` (local).
 
 ## Configuration
 
 ```json
 {
-  "syncscript.signalingUrl": "ws://localhost:4444",
+  "syncscript.signalingUrl": "wss://syncscript-signaling.onrender.com",
   "syncscript.displayName": "Your Name",
   "syncscript.encryptionKey": "shared-secret",
   "syncscript.orgId": "acme",
@@ -130,7 +140,7 @@ Open `http://localhost:4444/admin` for live room stats, audit log, and Redis bac
 ## Tests
 
 ```bash
-npm test                    # 19 unit tests
+npm test                    # unit tests
 docker compose --profile test up --build   # Smoke test
 SIGNALING_URL=ws://localhost:4444 npm test --workspace signaling  # Live integration
 ```
