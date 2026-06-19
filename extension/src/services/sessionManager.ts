@@ -25,8 +25,17 @@ export class SessionManager {
     private sessionStart = 0;
     private filesEdited = new Set<string>();
     private participantCount = 1;
+    private displayNameOverride?: string;
 
     constructor(private readonly context: vscode.ExtensionContext) {}
+
+    public setDisplayName(name: string): void {
+        this.displayNameOverride = name.trim() || undefined;
+    }
+
+    public clearDisplayName(): void {
+        this.displayNameOverride = undefined;
+    }
 
     public saveSession(record: SessionRecord): void {
         void this.context.globalState.update(SESSION_KEY, record);
@@ -41,6 +50,7 @@ export class SessionManager {
 
     public clearSession(): void {
         void this.context.globalState.update(SESSION_KEY, undefined);
+        this.clearDisplayName();
     }
 
     public recordFileEdit(relativePath: string): void {
@@ -92,6 +102,9 @@ export class SessionManager {
     }
 
     public getDisplayName(): string {
+        if (this.displayNameOverride) {
+            return this.displayNameOverride;
+        }
         const config = vscode.workspace.getConfiguration('syncscript');
         const configured = config.get<string>('displayName');
         if (configured) {

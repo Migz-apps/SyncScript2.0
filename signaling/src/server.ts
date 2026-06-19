@@ -156,6 +156,16 @@ function sendToSocket(socketId: string, payload: Record<string, unknown>): void 
   }
 }
 
+function findSocket(socketId: string): ExtendedWebSocket | undefined {
+  for (const client of wss.clients) {
+    const socket = client as ExtendedWebSocket;
+    if (socket.socketId === socketId) {
+      return socket;
+    }
+  }
+  return undefined;
+}
+
 function resetRoomBindings(roomId: string): void {
   for (const client of wss.clients) {
     const socket = client as ExtendedWebSocket;
@@ -398,8 +408,24 @@ async function handleMessage(ws: ExtendedWebSocket, rawMessage: RawData): Promis
 
       await roomManager.addUser(targetSocketId, pending.username, ws.roomId, role);
 
-      sendToSocket(targetSocketId, { type: "JOIN_APPROVED", roomId: ws.roomId, role });
+      const targetSocket = findSocket(targetSocketId);
+      if (targetSocket) {
+        targetSocket.roomId = ws.roomId;
+        targetSocket.username = pending.username;
+      }
+
       const users = await roomManager.listUsers(ws.roomId);
+
+      sendToSocket(targetSocketId, {
+        type: "JOIN_RESULT",
+        success: true,
+        room,
+        socketId: targetSocketId,
+        isAdmin: false,
+        users,
+        role
+      });
+      sendToSocket(targetSocketId, { type: "JOIN_APPROVED", roomId: ws.roomId, role });
 
       await publishRoomEvent({
         originNodeId: config.nodeId,

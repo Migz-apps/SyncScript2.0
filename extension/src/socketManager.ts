@@ -165,6 +165,10 @@ export class SocketManager {
 
         if (type === 'JOIN_APPROVED') {
             this.deps.permissions.setRole((message.role as UserRole) ?? 'editor');
+            if (message.roomId && !this.roomId) {
+                this.roomId = String(message.roomId);
+                this.notifyStatusChange();
+            }
         }
 
         if (type === 'ARCH_SHARE') {
@@ -535,8 +539,56 @@ export class SocketManager {
     }
 
     public sendChat(text: string): void {
-        const msg = this.deps.chat.send(text, this.deps.session.getDisplayName(), this.socketId ?? undefined);
+        if (!this.isInRoom()) {
+            return;
+        }
+        const trimmed = text.trim();
+        if (!trimmed) {
+            return;
+        }
+        const msg = {
+            type: 'CHAT_MESSAGE' as const,
+            username: this.deps.session.getDisplayName(),
+            text: trimmed,
+            timestamp: Date.now(),
+            socketId: this.socketId ?? undefined
+        };
+        this.deps.chat.addOptimistic(msg);
         this.send(msg);
+    }
+
+    public async pullMissingFiles(): Promise<number> {
+        if (!this.isInRoom()) {
+            return 0;
+        }
+
+        const local = new Set(await this.deps.fileSync.getLocalManifest());
+        this.send({
+            type: 'ARCH_SHARE',
+            manifest: [...local]
+        });
+
+        await new Promise((r) => setTimeout(r, 800));
+
+        const peerPaths = new Set<string>();
+        for (const manifest of this.peerManifests.values()) {
+            for (const p of manifest) {
+                peerPaths.add(p);
+            }
+        }
+
+        let requested = 0;
+        for (const relativePath of peerPaths) {
+            if (!local.has(relativePath) && IgnoreManager.shouldSyncFile(relativePath)) {
+                this.send({
+                    type: 'FILE_REQUEST',
+                    relativePath,
+                    requesterId: this.socketId
+                });
+                requested++;
+            }
+        }
+        return requested;
     }
 
     public sendAnnotation(relativePath: string, line: number, text: string): void {

@@ -69,6 +69,9 @@ export class SyncScriptProvider implements vscode.WebviewViewProvider {
             switch (data.command) {
                 case 'createRoom':
                     this.lastRoomKey = String(data.key ?? '');
+                    if (data.displayName) {
+                        this._session.setDisplayName(String(data.displayName));
+                    }
                     this._socket.send({
                         type: 'CREATE_ROOM',
                         adminName: this._session.getDisplayName(),
@@ -80,10 +83,11 @@ export class SyncScriptProvider implements vscode.WebviewViewProvider {
 
                 case 'joinRoom':
                     this.lastRoomKey = String(data.key ?? '');
+                    this._session.setDisplayName(String(data.name ?? this._session.getDisplayName()));
                     this._socket.send({
                         type: 'JOIN_ROOM',
                         roomId: data.roomId,
-                        userName: data.name ?? this._session.getDisplayName(),
+                        userName: this._session.getDisplayName(),
                         key: data.key
                     });
                     break;
@@ -135,6 +139,19 @@ export class SyncScriptProvider implements vscode.WebviewViewProvider {
                         manifest: [],
                         localManifest
                     });
+                    this.updateUI({ type: 'TOAST', message: 'Comparing workspace with peers…', level: 'info' });
+                    break;
+                }
+
+                case 'pullSync': {
+                    const requested = await this._socket.pullMissingFiles();
+                    this.updateUI({
+                        type: 'TOAST',
+                        message: requested > 0
+                            ? `Sync started — requested ${requested} missing file(s) from peers.`
+                            : 'Already in sync — no missing files found.',
+                        level: requested > 0 ? 'success' : 'info'
+                    });
                     break;
                 }
 
@@ -142,7 +159,7 @@ export class SyncScriptProvider implements vscode.WebviewViewProvider {
                     if (this._socket.getRoomId() && this.lastRoomKey) {
                         const link = this._session.getInviteLink(this._socket.getRoomId()!, this.lastRoomKey);
                         await vscode.env.clipboard.writeText(link);
-                        this.updateUI({ type: 'INVITE_COPIED' });
+                        this.updateUI({ type: 'TOAST', message: 'Invite link copied to clipboard.', level: 'success' });
                     }
                     break;
 
@@ -150,6 +167,7 @@ export class SyncScriptProvider implements vscode.WebviewViewProvider {
                     const record = data.record as { roomId: string; key: string; username: string };
                     if (record) {
                         this.lastRoomKey = record.key;
+                        this._session.setDisplayName(record.username);
                         this._socket.send({
                             type: 'JOIN_ROOM',
                             roomId: record.roomId,
@@ -161,6 +179,14 @@ export class SyncScriptProvider implements vscode.WebviewViewProvider {
                 }
 
                 case 'sendChat':
+                    if (!this._socket.isInRoom()) {
+                        this.updateUI({
+                            type: 'TOAST',
+                            message: 'Join a room before sending chat messages.',
+                            level: 'error'
+                        });
+                        break;
+                    }
                     if (data.text) {
                         this._socket.sendChat(String(data.text));
                     }
@@ -172,6 +198,9 @@ export class SyncScriptProvider implements vscode.WebviewViewProvider {
                         type: 'SESSION_HISTORY',
                         history: this._session.getHistory()
                     });
+                    if (this._socket.isInRoom()) {
+                        this.updateUI({ type: 'CHAT_HISTORY', messages: this._chat.getMessages() });
+                    }
                     break;
             }
         });

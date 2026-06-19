@@ -3,6 +3,7 @@
     try { vscode = acquireVsCodeApi(); } catch { vscode = window.vscodeApi; }
 
     let countdownInterval = null;
+    let toastTimer = null;
 
     const startApp = () => {
         const views = {
@@ -29,10 +30,35 @@
         const historyList = document.getElementById('history-list');
         const diagnosticsPanel = document.getElementById('diagnostics-panel');
         const diagnosticsList = document.getElementById('diagnostics-list');
+        const actionToast = document.getElementById('action-toast');
 
         const showView = (id) => {
             Object.keys(views).forEach(v => views[v]?.classList.add('hidden'));
             views[id]?.classList.remove('hidden');
+        };
+
+        const showToast = (message, level = 'info') => {
+            if (!actionToast || !message) return;
+            actionToast.textContent = message;
+            actionToast.className = `visible ${level}`;
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                actionToast.className = 'hidden';
+            }, 3200);
+        };
+
+        const flashButton = (btn) => {
+            if (!btn) return;
+            btn.classList.add('is-flashing');
+            setTimeout(() => btn.classList.remove('is-flashing'), 650);
+        };
+
+        const withAction = (btn, run, confirmMessage) => {
+            flashButton(btn);
+            run();
+            if (confirmMessage) {
+                showToast(confirmMessage, 'success');
+            }
         };
 
         const handleStateUpdate = (data) => {
@@ -54,9 +80,13 @@
                 case 'CONNECTED_NO_ROOM':
                     statusDot.className = 'w-3 h-3 bg-yellow-500 rounded-full';
                     break;
+                case 'CONNECTING':
+                    statusDot.className = 'w-3 h-3 bg-yellow-400 rounded-full animate-pulse';
+                    break;
                 case 'IN_ROOM':
                     statusDot.className = 'w-3 h-3 bg-green-500 rounded-full';
                     showView('active');
+                    document.getElementById('chat-section')?.classList.remove('hidden');
                     if (role) roleBadge.textContent = `Role: ${role}`;
                     break;
             }
@@ -91,16 +121,18 @@
             if (!history?.length) return;
             historySection?.classList.remove('hidden');
             historyList.innerHTML = history.map(h =>
-                `<button class="history-rejoin w-full text-left text-xs bg-gray-800 hover:bg-gray-700 p-2 rounded" data-room="${h.roomId}" data-key="${h.key}" data-name="${h.username}">
+                `<button class="history-rejoin btn-action w-full text-left text-xs bg-gray-800 hover:bg-gray-700 p-2 rounded" data-room="${h.roomId}" data-key="${h.key}" data-name="${h.username}">
                     ${h.roomName} <span class="text-gray-500">(${h.roomId})</span>
                 </button>`
             ).join('');
             document.querySelectorAll('.history-rejoin').forEach(btn => {
                 btn.addEventListener('click', () => {
-                    vscode.postMessage({
-                        command: 'rejoinHistory',
-                        record: { roomId: btn.dataset.room, key: btn.dataset.key, username: btn.dataset.name }
-                    });
+                    withAction(btn, () => {
+                        vscode.postMessage({
+                            command: 'rejoinHistory',
+                            record: { roomId: btn.dataset.room, key: btn.dataset.key, username: btn.dataset.name }
+                        });
+                    }, 'Rejoining room…');
                 });
             });
         };
@@ -108,65 +140,104 @@
         showView('selection');
         vscode.postMessage({ command: 'getInitialState' });
 
-        document.getElementById('nav-to-create')?.addEventListener('click', () => showView('create'));
-        document.getElementById('nav-to-join')?.addEventListener('click', () => showView('join'));
-        document.querySelectorAll('.nav-back').forEach(btn => btn.addEventListener('click', () => showView('selection')));
+        document.getElementById('nav-to-create')?.addEventListener('click', (e) => {
+            withAction(e.currentTarget, () => showView('create'));
+        });
+        document.getElementById('nav-to-join')?.addEventListener('click', (e) => {
+            withAction(e.currentTarget, () => showView('join'));
+        });
+        document.querySelectorAll('.nav-back').forEach(btn => btn.addEventListener('click', (e) => {
+            withAction(e.currentTarget, () => showView('selection'));
+        }));
 
-        document.getElementById('btn-create')?.addEventListener('click', () => {
+        document.getElementById('btn-create')?.addEventListener('click', (e) => {
+            const displayName = document.getElementById('create-display-name').value.trim();
             const roomName = document.getElementById('create-name').value.trim();
             const key = document.getElementById('create-key').value;
             const requireApproval = document.getElementById('create-approval')?.checked;
-            if (!roomName || !key) { alert('Room Name and Password are required.'); return; }
-            vscode.postMessage({ command: 'createRoom', roomName, key, requireApproval });
+            if (!displayName || !roomName || !key) {
+                showToast('Your name, room name, and password are required.', 'error');
+                return;
+            }
+            withAction(e.currentTarget, () => {
+                vscode.postMessage({ command: 'createRoom', displayName, roomName, key, requireApproval });
+            }, 'Creating room…');
         });
 
-        document.getElementById('btn-join')?.addEventListener('click', () => {
+        document.getElementById('btn-join')?.addEventListener('click', (e) => {
             const roomId = document.getElementById('join-id').value.trim();
             const name = document.getElementById('join-name').value.trim();
             const key = document.getElementById('join-key').value;
-            if (!roomId || !name || !key) { alert('Please fill in all fields.'); return; }
-            vscode.postMessage({ command: 'joinRoom', roomId, name, key });
+            if (!roomId || !name || !key) {
+                showToast('Please fill in all fields.', 'error');
+                return;
+            }
+            withAction(e.currentTarget, () => {
+                vscode.postMessage({ command: 'joinRoom', roomId, name, key });
+            }, 'Connecting to room…');
         });
 
-        document.getElementById('btn-leave')?.addEventListener('click', () => {
-            vscode.postMessage({ command: 'leaveRoom' });
-            showView('selection');
+        document.getElementById('btn-leave')?.addEventListener('click', (e) => {
+            withAction(e.currentTarget, () => {
+                vscode.postMessage({ command: 'leaveRoom' });
+                showView('selection');
+            }, 'Left the room.');
         });
 
-        document.getElementById('btn-copy-room-id')?.addEventListener('click', async () => {
+        document.getElementById('btn-copy-room-id')?.addEventListener('click', async (e) => {
             const id = roomIdDisplay?.textContent?.trim();
-            if (id && id !== '---') await navigator.clipboard.writeText(id);
-        });
-
-        document.getElementById('btn-copy-invite')?.addEventListener('click', () => {
-            vscode.postMessage({ command: 'copyInvite' });
-        });
-
-        btnDeactivate?.addEventListener('click', () => {
-            if (confirm('Deactivate room? All participants will be disconnected in 2 minutes.')) {
-                vscode.postMessage({ command: 'deactivateRoom' });
+            if (id && id !== '---') {
+                await navigator.clipboard.writeText(id);
+                withAction(e.currentTarget, () => {}, 'Room ID copied.');
             }
         });
 
-        btnStopDeactivation?.addEventListener('click', () => {
-            vscode.postMessage({ command: 'cancelDeactivation' });
+        document.getElementById('btn-copy-invite')?.addEventListener('click', (e) => {
+            withAction(e.currentTarget, () => {
+                vscode.postMessage({ command: 'copyInvite' });
+            });
         });
 
-        document.getElementById('btn-sync-check')?.addEventListener('click', () => {
+        btnDeactivate?.addEventListener('click', (e) => {
+            if (confirm('Deactivate room? All participants will be disconnected in 2 minutes.')) {
+                withAction(e.currentTarget, () => {
+                    vscode.postMessage({ command: 'deactivateRoom' });
+                }, 'Room deactivation started.');
+            }
+        });
+
+        btnStopDeactivation?.addEventListener('click', (e) => {
+            withAction(e.currentTarget, () => {
+                vscode.postMessage({ command: 'cancelDeactivation' });
+            }, 'Deactivation cancelled.');
+        });
+
+        document.getElementById('btn-pull-sync')?.addEventListener('click', (e) => {
+            withAction(e.currentTarget, () => {
+                vscode.postMessage({ command: 'pullSync' });
+            });
+        });
+
+        document.getElementById('btn-sync-check')?.addEventListener('click', (e) => {
             archContainer?.classList.remove('hidden');
             archContainer.innerHTML = '<p class="text-gray-500 animate-pulse">Comparing workspace...</p>';
-            vscode.postMessage({ command: 'checkSync' });
+            withAction(e.currentTarget, () => {
+                vscode.postMessage({ command: 'checkSync' });
+            });
         });
 
         const chatInput = document.getElementById('chat-input');
+        const btnSendChat = document.getElementById('btn-send-chat');
         const sendChat = () => {
             const text = chatInput?.value?.trim();
             if (text) {
-                vscode.postMessage({ command: 'sendChat', text });
-                if (chatInput) chatInput.value = '';
+                withAction(btnSendChat, () => {
+                    vscode.postMessage({ command: 'sendChat', text });
+                    if (chatInput) chatInput.value = '';
+                }, 'Message sent.');
             }
         };
-        document.getElementById('btn-send-chat')?.addEventListener('click', sendChat);
+        btnSendChat?.addEventListener('click', sendChat);
         chatInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChat(); });
 
         const renderChat = (messages) => {
@@ -174,10 +245,16 @@
             if (!box) return;
             const list = Array.isArray(messages) ? messages : [messages];
             box.innerHTML = list.map(m =>
-                `<div><span class="text-blue-400">${m.username}:</span> <span class="text-gray-300">${m.text}</span></div>`
+                `<div><span class="text-blue-400 font-medium">${escapeHtml(m.username)}:</span> <span class="text-gray-300">${escapeHtml(m.text)}</span></div>`
             ).join('');
             box.scrollTop = box.scrollHeight;
         };
+
+        const escapeHtml = (value) => String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
 
         window.addEventListener('message', event => {
             const msg = event.data;
@@ -192,6 +269,7 @@
                     document.getElementById('chat-section')?.classList.remove('hidden');
                     roomIdDisplay.textContent = msg.roomId || '---';
                     roomNameDisplay.textContent = msg.roomName || 'Active Room';
+                    showToast(`Joined ${msg.roomName || 'room'} successfully.`, 'success');
                     if (msg.isAdmin) {
                         btnDeactivate?.classList.remove('hidden');
                         btnStopDeactivation?.classList.remove('hidden');
@@ -211,24 +289,30 @@
                                     (msg.manifest?.includes(p)) ? 'missing-locally' : 'extra-locally'
                         }));
                         window.TreeViewRenderer.render(archContainer, diff);
+                        showToast('Folder comparison updated.', 'info');
                     }
                     break;
 
                 case 'JOIN_PENDING':
                     pendingJoins?.classList.remove('hidden');
+                    showToast('Waiting for host approval…', 'info');
                     const pending = msg.pending || [{ socketId: msg.socketId, username: msg.userName }];
                     pendingList.innerHTML = pending.map(p =>
                         `<div class="flex gap-2 items-center text-xs">
                             <span>${p.username}</span>
-                            <button class="approve-join bg-green-700 px-2 py-0.5 rounded" data-id="${p.socketId}">Approve</button>
-                            <button class="deny-join bg-red-800 px-2 py-0.5 rounded" data-id="${p.socketId}">Deny</button>
+                            <button class="approve-join btn-action bg-green-700 px-2 py-0.5 rounded" data-id="${p.socketId}">Approve</button>
+                            <button class="deny-join btn-action bg-red-800 px-2 py-0.5 rounded" data-id="${p.socketId}">Deny</button>
                         </div>`
                     ).join('');
                     pendingList.querySelectorAll('.approve-join').forEach(b => b.addEventListener('click', () => {
-                        vscode.postMessage({ command: 'approveJoin', targetSocketId: b.dataset.id, role: 'editor' });
+                        withAction(b, () => {
+                            vscode.postMessage({ command: 'approveJoin', targetSocketId: b.dataset.id, role: 'editor' });
+                        }, 'Join request approved.');
                     }));
                     pendingList.querySelectorAll('.deny-join').forEach(b => b.addEventListener('click', () => {
-                        vscode.postMessage({ command: 'denyJoin', targetSocketId: b.dataset.id });
+                        withAction(b, () => {
+                            vscode.postMessage({ command: 'denyJoin', targetSocketId: b.dataset.id });
+                        }, 'Join request denied.');
                     }));
                     break;
 
@@ -243,22 +327,24 @@
                 case 'DEACTIVATION_START':
                     deactivationOverlay?.classList.remove('hidden');
                     startUIInterval(msg.duration || 120);
+                    showToast('Room deactivation countdown started.', 'info');
                     break;
 
                 case 'DEACTIVATION_CANCELLED':
                     deactivationOverlay?.classList.add('hidden');
                     clearInterval(countdownInterval);
+                    showToast('Deactivation cancelled.', 'success');
                     break;
 
                 case 'ROOM_TERMINATED':
                     deactivationOverlay?.classList.add('hidden');
                     clearInterval(countdownInterval);
                     showView('selection');
-                    alert('Room deactivated.');
+                    showToast('Room deactivated.', 'info');
                     break;
 
                 case 'JOIN_RESULT':
-                    if (!msg.success) alert(msg.error || 'Failed to join.');
+                    if (!msg.success) showToast(msg.error || 'Failed to join room.', 'error');
                     break;
 
                 case 'USER_JOINED':
@@ -272,8 +358,8 @@
                     renderChat(msg.messages || [msg]);
                     break;
 
-                case 'INVITE_COPIED':
-                    alert('Invite link copied to clipboard!');
+                case 'TOAST':
+                    showToast(msg.message, msg.level || 'info');
                     break;
             }
         });

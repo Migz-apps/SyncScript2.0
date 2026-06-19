@@ -133,7 +133,7 @@
     "tailwind:watch": "tailwindcss -i ./webview/style.css -o ./webview/output.css --watch"
   },
   "devDependencies": {
-    "@vscode/vsce": "^3.2.2",
+    "@vscode/vsce": "^3.9.2",
     "@types/diff-match-patch": "^1.0.36",
     "@types/node": "18.x",
     "@types/vscode": "^1.85.0",

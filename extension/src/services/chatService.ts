@@ -14,24 +14,22 @@ export class ChatService {
         this.onUpdate = handler;
     }
 
-    public send(text: string, username: string, socketId?: string): ChatMessage {
-        const msg: ChatMessage = {
-            type: 'CHAT_MESSAGE',
-            username,
-            text,
-            timestamp: Date.now(),
-            socketId
-        };
+    public addOptimistic(msg: ChatMessage): void {
+        if (this.isDuplicate(msg)) {
+            return;
+        }
         this.messages.push(msg);
+        this.trim();
         this.onUpdate?.([...this.messages]);
-        return msg;
     }
 
-    public receive(msg: ChatMessage): void {
-        this.messages.push(msg);
-        if (this.messages.length > 200) {
-            this.messages = this.messages.slice(-200);
+    public receive(raw: ChatMessage & { sender?: string }): void {
+        const msg = this.normalize(raw);
+        if (this.isDuplicate(msg)) {
+            return;
         }
+        this.messages.push(msg);
+        this.trim();
         this.onUpdate?.([...this.messages]);
     }
 
@@ -42,5 +40,29 @@ export class ChatService {
     public reset(): void {
         this.messages = [];
         this.onUpdate?.([]);
+    }
+
+    private normalize(raw: ChatMessage & { sender?: string }): ChatMessage {
+        return {
+            type: 'CHAT_MESSAGE',
+            username: String(raw.sender || raw.username || 'Unknown').trim() || 'Unknown',
+            text: String(raw.text ?? ''),
+            timestamp: Number(raw.timestamp ?? Date.now()),
+            socketId: raw.socketId
+        };
+    }
+
+    private isDuplicate(msg: ChatMessage): boolean {
+        return this.messages.some((existing) =>
+            existing.socketId === msg.socketId
+            && existing.text === msg.text
+            && Math.abs(existing.timestamp - msg.timestamp) < 5000
+        );
+    }
+
+    private trim(): void {
+        if (this.messages.length > 200) {
+            this.messages = this.messages.slice(-200);
+        }
     }
 }
